@@ -33,7 +33,7 @@ tell application "System Events"
   try
     tell process frontApp
       set frontWindowTitle to name of front window
-    end try
+    end tell
   end try
   return frontApp & "|||" & frontWindowTitle
 end tell
