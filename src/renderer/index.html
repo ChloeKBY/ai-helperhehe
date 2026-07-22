@@ -9,40 +9,63 @@
       padding: 0;
       background: transparent;
       overflow: hidden;
-      -webkit-app-region: drag; /* lets you drag the borderless window */
       user-select: none;
     }
+
     #sprite {
       width: 100%;
       display: block;
+      -webkit-app-region: drag; /* drag the window from the character */
+      cursor: pointer;
     }
-    #chatBubble {
+
+    /* Speech bubble that appears above the character with her reply */
+    #speechBubble {
       position: absolute;
-      bottom: 44px;
-      left: 10px;
-      right: 10px;
-      background: rgba(20, 15, 25, 0.85);
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      min-width: 140px;
+      max-width: 220px;
+      background: rgba(20, 15, 25, 0.92);
       color: #e8dfff;
       font-family: Georgia, serif;
       font-size: 13px;
       padding: 8px 10px;
-      border-radius: 6px;
-      max-height: 120px;
-      overflow-y: auto;
-      -webkit-app-region: no-drag; /* so you can scroll/select text in the bubble */
-    }
-    #inputBar {
-      position: absolute;
-      bottom: 8px;
-      left: 10px;
-      right: 10px;
-      display: flex;
-      gap: 4px;
+      border-radius: 8px;
       -webkit-app-region: no-drag;
+      display: none;
+    }
+    #speechBubble.visible {
+      display: block;
+    }
+    /* little tail pointing down at the character */
+    #speechBubble::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: rgba(20, 15, 25, 0.92);
+    }
+
+    /* Input box that appears when you click the character */
+    #inputBox {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 180px;
+      -webkit-app-region: no-drag;
+      display: none;
+    }
+    #inputBox.visible {
+      display: flex;
     }
     #chatInput {
       flex: 1;
-      background: rgba(20, 15, 25, 0.9);
+      background: rgba(20, 15, 25, 0.95);
       color: #e8dfff;
       border: 1px solid #4a3a5a;
       border-radius: 4px;
@@ -51,26 +74,20 @@
       font-size: 13px;
       outline: none;
     }
-    #sendBtn {
-      background: #4a3a5a;
-      color: #e8dfff;
-      border: none;
-      border-radius: 4px;
-      padding: 6px 10px;
-      font-family: Georgia, serif;
-      cursor: pointer;
-    }
-    #sendBtn:hover {
-      background: #5c4a70;
+
+    #wrapper {
+      position: relative;
+      width: 100%;
     }
   </style>
 </head>
 <body>
-  <img id="sprite" src="../../assets/pngtuber/idle.png" alt="Vivian" />
-  <div id="chatBubble"></div>
-  <div id="inputBar">
-    <input id="chatInput" type="text" placeholder="Talk to Vivian..." />
-    <button id="sendBtn">Send</button>
+  <div id="wrapper">
+    <div id="speechBubble"></div>
+    <div id="inputBox">
+      <input id="chatInput" type="text" placeholder="Ask Vivian..." autofocus />
+    </div>
+    <img id="sprite" src="../../assets/pngtuber/idle.png" alt="Vivian" />
   </div>
 
   <script src="renderer.js"></script>
