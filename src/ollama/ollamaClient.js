@@ -31,7 +31,10 @@ async function streamChat(systemPrompt, userMessage, onToken) {
     body: JSON.stringify({
       model: MODEL_NAME,
       prompt: fullPrompt,
-      stream: true
+      stream: true,
+      options: {
+        num_predict: 80 // hard cap on response length — keeps her replies short and snappy
+      }
     })
   });
 
