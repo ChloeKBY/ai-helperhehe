@@ -19,5 +19,10 @@ contextBridge.exposeInMainWorld("vivian", {
 
   // Memory read/update (renderer never touches the file system directly)
   getMemory: () => ipcRenderer.invoke("memory:get"),
-  updateMemory: (key, value) => ipcRenderer.invoke("memory:update", { key, value })
+  updateMemory: (key, value) => ipcRenderer.invoke("memory:update", { key, value }),
+
+  // Fires when the productivity watcher intervenes (e.g. closed an app)
+  onIntervention: (callback) => {
+    ipcRenderer.on("productivity:intervened", (event, message) => callback(message));
+  }
 });

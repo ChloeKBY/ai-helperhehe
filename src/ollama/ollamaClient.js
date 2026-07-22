@@ -95,4 +95,44 @@ async function isOllamaRunning() {
   }
 }
 
-module.exports = { streamChat, chat, isOllamaRunning, MODEL_NAME };
+const VISION_MODEL_NAME = "moondream"; // lightweight vision model, ~1.8GB
+
+/**
+ * Sends a base64-encoded screenshot to a local vision model for a judgment
+ * call (e.g. "is this person studying or procrastinating?"). One-shot,
+ * not streamed, since we just want a short verdict.
+ *
+ * Requires: `ollama pull moondream` (or swap MODEL_NAME to "llava-phi3").
+ *
+ * @param {string} base64Image - image data WITHOUT the data:image/... prefix
+ * @param {string} question - what to ask about the image
+ * @returns {Promise<string>} the model's answer
+ */
+async function analyzeImage(base64Image, question) {
+  const response = await fetch(OLLAMA_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: VISION_MODEL_NAME,
+      prompt: question,
+      images: [base64Image],
+      stream: false
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Ollama vision request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.response || "";
+}
+
+module.exports = {
+  streamChat,
+  chat,
+  isOllamaRunning,
+  analyzeImage,
+  MODEL_NAME,
+  VISION_MODEL_NAME
+};

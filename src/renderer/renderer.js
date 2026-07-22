@@ -43,6 +43,28 @@ function setSprite(state) {
   sprite.src = `../../assets/pngtuber/${state}.png`;
 }
 
-// Expose for now so you can test from DevTools console before building
-// a real input UI: sendToVivian("hey")
+// Still exposed for DevTools testing/debugging if needed
 window.sendToVivian = sendToVivian;
+
+/* ---------- Wire up the actual input bar ---------- */
+const chatInput = document.getElementById("chatInput");
+const sendBtn = document.getElementById("sendBtn");
+
+function handleSend() {
+  const message = chatInput.value.trim();
+  if (!message) return;
+  chatInput.value = "";
+  sendToVivian(message);
+}
+
+sendBtn.addEventListener("click", handleSend);
+chatInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleSend();
+});
+
+// Show a message in the chat bubble whenever the productivity watcher steps in
+window.vivian.onIntervention((message) => {
+  currentResponse = message;
+  chatBubble.textContent = currentResponse;
+  setSprite("stern");
+});

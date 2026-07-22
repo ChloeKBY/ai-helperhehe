@@ -18,7 +18,7 @@
     }
     #chatBubble {
       position: absolute;
-      bottom: 10px;
+      bottom: 44px;
       left: 10px;
       right: 10px;
       background: rgba(20, 15, 25, 0.85);
@@ -31,11 +31,47 @@
       overflow-y: auto;
       -webkit-app-region: no-drag; /* so you can scroll/select text in the bubble */
     }
+    #inputBar {
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      gap: 4px;
+      -webkit-app-region: no-drag;
+    }
+    #chatInput {
+      flex: 1;
+      background: rgba(20, 15, 25, 0.9);
+      color: #e8dfff;
+      border: 1px solid #4a3a5a;
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-family: Georgia, serif;
+      font-size: 13px;
+      outline: none;
+    }
+    #sendBtn {
+      background: #4a3a5a;
+      color: #e8dfff;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-family: Georgia, serif;
+      cursor: pointer;
+    }
+    #sendBtn:hover {
+      background: #5c4a70;
+    }
   </style>
 </head>
 <body>
   <img id="sprite" src="../../assets/pngtuber/idle.png" alt="Vivian" />
   <div id="chatBubble"></div>
+  <div id="inputBar">
+    <input id="chatInput" type="text" placeholder="Talk to Vivian..." />
+    <button id="sendBtn">Send</button>
+  </div>
 
   <script src="renderer.js"></script>
 </body>
