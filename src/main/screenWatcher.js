@@ -1,10 +1,10 @@
 const { desktopCapturer, screen } = require("electron");
-const moondream = require("../moondream/moondreamClient"); // adjust path
-const { blockFirefox } = require("./firefoxBlocker");       // adjust path
+const moondream = require("../moondream/moondream");
+const { blockFirefox } = require("./firefoxBlocker");
 
 async function captureScreenBuffer() {
   const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
+  const { width, height } = primaryDisplay.size;
 
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
@@ -15,7 +15,7 @@ async function captureScreenBuffer() {
     throw new Error("No screen sources available — check Screen Recording permission.");
   }
 
-  return sources[0].thumbnail.toPNG(); // raw PNG buffer
+  return sources[0].thumbnail.toPNG();
 }
 
 async function analyzeScreenForCAI() {
@@ -27,21 +27,24 @@ async function analyzeScreenForCAI() {
       "Is the user currently on the website character.ai? Answer YES or NO only."
     );
 
-    const answer = result.toUpperCase().trim();
+    const answer = String(result).toUpperCase().trim();
     return answer.includes("YES");
   } catch (err) {
-    console.error("Moondream error:", err);
+    console.error("Moondream screen analysis failed:", err);
     return false;
   }
 }
 
 function startCAIMonitoring() {
   setInterval(async () => {
-    const isOnCAI = await analyzeScreenForCAI();
-
-    if (isOnCAI) {
-      console.log("Detected character.ai — blocking Firefox...");
-      blockFirefox();
+    try {
+      const isOnCAI = await analyzeScreenForCAI();
+      if (isOnCAI) {
+        console.log("Detected character.ai — blocking Firefox...");
+        blockFirefox();
+      }
+    } catch (err) {
+      console.warn("CAI monitoring loop error:", err);
     }
   }, 8000);
 }

@@ -13,41 +13,22 @@
 
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 const ollamaClient = require("../ollama/ollamaClient");
 const memoryManager = require("../memory/memoryManager");
-const { watchFocus } = require("./focusWatcher");
-const { checkProductivity } = require("./screenWatcher");
-const { closeApp, blockApp } = require("./processWatcher");
-const { dragMouseToCorner } = require("./mouseControl");
-const fs = require("fs");
-
-/**
- * Productivity rule config. Edit these to change what counts as
- * "watched" and how long before Vivian steps in.
- *
- * IMPORTANT: this watches for specific SITE keywords in the browser's
- * window title — not the browser app as a whole. So studying on Firefox
- * for an hour won't trigger anything; only having one of these keywords
- * in the title for that long will.
- */
-const WATCHED_APP = "Firefox";
-const WATCHED_TITLE_KEYWORDS = ["character.ai", "c.ai"]; // add more sites here
-const FOCUS_THRESHOLD_MS = 30 * 1000; // TESTING: 30 seconds (change back to 60*60*1000 for real use)
-const BLOCK_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
-
 const { startCAIMonitoring } = require("./screenWatcher");
+
+let mainWindow;
 
 app.whenReady().then(() => {
   createWindow();
   startCAIMonitoring();
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
 });
-
-
-let stopFocusWatch = null;
-let currentlyBlocking = false; // prevents re-triggering while already blocked
-
-let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -70,64 +51,6 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
 }
 
-/**
- * Starts the always-on, low-cost focus watcher. When a watched app has
- * been focused past the threshold, it triggers ONE screenshot + vision
- * check (not continuous) to decide whether to actually intervene.
- */
-function startProductivityWatch() {
-  stopFocusWatch = watchFocus({
-    app: WATCHED_APP,
-    titleKeywords: WATCHED_TITLE_KEYWORDS,
-    thresholdMs: FOCUS_THRESHOLD_MS,
-    onFlagged: async (matchedKeyword, durationMs) => {
-      if (currentlyBlocking) return; // don't stack triggers while already blocked
-
-      try {
-        const result = await checkProductivity(matchedKeyword);
-        console.log("Screen check result:", result);
-
-        if (result.verdict === "distracted") {
-          currentlyBlocking = true;
-          await closeApp(WATCHED_APP);
-
-          try {
-            await dragMouseToCorner("bottom-right");
-          } catch (err) {
-            console.warn("Mouse drag failed (cliclick installed?):", err.message);
-          }
-
-          blockApp(WATCHED_APP, BLOCK_DURATION_MS);
-          setTimeout(() => {
-            currentlyBlocking = false;
-          }, BLOCK_DURATION_MS);
-
-          if (mainWindow) {
-            mainWindow.webContents.send(
-              "productivity:intervened",
-              `Closed Firefox — "${matchedKeyword}" has been open a while. Taking a ${BLOCK_DURATION_MS / 60000}-minute break from it.`
-            );
-          }
-        }
-      } catch (err) {
-        console.warn("Productivity check failed (likely missing screen permission):", err.message);
-      }
-    }
-  });
-}
-
-app.whenReady().then(() => {
-  createWindow();
-  startProductivityWatch();
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
-
-app.on("before-quit", () => {
-  if (stopFocusWatch) stopFocusWatch();
-});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
