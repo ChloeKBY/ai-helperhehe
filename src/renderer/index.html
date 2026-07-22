@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Vivian</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      overflow: hidden;
+      -webkit-app-region: drag; /* lets you drag the borderless window */
+      user-select: none;
+    }
+    #sprite {
+      width: 100%;
+      display: block;
+    }
+    #chatBubble {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      background: rgba(20, 15, 25, 0.85);
+      color: #e8dfff;
+      font-family: Georgia, serif;
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      max-height: 120px;
+      overflow-y: auto;
+      -webkit-app-region: no-drag; /* so you can scroll/select text in the bubble */
+    }
+  </style>
+</head>
+<body>
+  <img id="sprite" src="../../assets/pngtuber/idle.png" alt="Vivian" />
+  <div id="chatBubble"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
