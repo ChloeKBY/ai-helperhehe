@@ -1,56 +1,97 @@
 /**
  * focusWatcher.js
  *
- * Cheap, low-frequency check of which app is currently focused on macOS.
- * This is the "first filter" — it runs constantly with negligible CPU cost,
- * and only flags when a heavier check (screenWatcher.js) should run.
+ * Cheap, low-frequency check of the currently focused app AND its window
+ * title on macOS. This is the "first filter" — runs constantly with
+ * negligible CPU cost, and only flags when a heavier check
+ * (screenWatcher.js) should run.
  *
- * Uses AppleScript via osascript, which is a tiny, near-instant call —
- * nowhere near the cost of an LLM call or screenshot.
+ * Why title, not just app name: watching "Firefox" as a whole would flag
+ * you for studying on Firefox just as much as for browsing c.ai on
+ * Firefox — they're the same app. So instead we match on keywords in the
+ * window title (which shows the page title, even in private/incognito
+ * windows) to only flag specific SITES, not the whole browser.
+ *
+ * Uses AppleScript via osascript — a tiny, near-instant call, nowhere near
+ * the cost of an LLM call or screenshot.
  */
 
 const { exec } = require("child_process");
 
-/** Returns the name of the currently focused application. */
-function getFocusedApp() {
+/** Returns { appName, windowTitle } for whatever's currently focused. */
+function getFocusedWindow() {
   return new Promise((resolve, reject) => {
-    const script = `tell application "System Events" to get name of first application process whose frontmost is true`;
-    exec(`osascript -e '${script}'`, (err, stdout) => {
+    const script = `
+      tell application "System Events"
+        set frontApp to name of first application process whose frontmost is true
+        set frontWindowTitle to ""
+        try
+          tell process frontApp
+            set frontWindowTitle to name of front window
+          end try
+        end try
+        return frontApp & "|||" & frontWindowTitle
+      end tell
+    `;
+    exec(`osascript -e '${script.replace(/\n/g, " ")}'`, (err, stdout) => {
       if (err) return reject(err);
-      resolve(stdout.trim());
+      const [appName, windowTitle] = stdout.trim().split("|||");
+      resolve({ appName: appName || "", windowTitle: windowTitle || "" });
     });
   });
 }
 
 /**
- * Watches focus changes and calls onFlagged(appName, durationMs) when a
- * "watched" app (e.g. Firefox, if you're monitoring c.ai usage) has stayed
- * focused continuously for longer than thresholdMs.
+ * Watches for specific SITE keywords appearing in the window title of a
+ * given app (e.g. app: "Firefox", titleKeywords: ["character.ai", "c.ai"]),
+ * and calls onFlagged(matchedKeyword, durationMs) once that keyword has
+ * been continuously visible in the title for longer than thresholdMs.
  *
- * This is intentionally simple polling (every few seconds) rather than a
- * true event listener, since macOS doesn't expose a cheap focus-change
- * event to a sandboxed Electron app — polling at a low frequency like this
- * still costs near-zero CPU.
+ * Works with private/incognito windows too, since the page title still
+ * renders in the title bar regardless of browsing mode.
+ *
+ * @param {Object} config
+ * @param {string} config.app - the app to watch (e.g. "Firefox")
+ * @param {string[]} config.titleKeywords - case-insensitive keywords to
+ *   match against the window title (e.g. site names)
+ * @param {number} config.thresholdMs - how long a match must persist
+ *   before triggering
+ * @param {(matchedKeyword: string, durationMs: number) => void} config.onFlagged
+ * @param {number} [config.intervalMs=5000] - polling frequency
  */
-function watchFocus({ watchedApps, thresholdMs, onFlagged, intervalMs = 5000 }) {
-  let currentApp = null;
-  let focusStartTime = null;
+function watchFocus({ app, titleKeywords, thresholdMs, onFlagged, intervalMs = 5000 }) {
+  let currentMatch = null; // the keyword currently matched, or null
+  let matchStartTime = null;
+  let alreadyFlaggedForThisMatch = false;
 
   const interval = setInterval(async () => {
     try {
-      const app = await getFocusedApp();
+      const { appName, windowTitle } = await getFocusedWindow();
 
-      if (app !== currentApp) {
-        currentApp = app;
-        focusStartTime = Date.now();
+      if (appName !== app) {
+        currentMatch = null;
         return;
       }
 
-      if (watchedApps.includes(currentApp)) {
-        const duration = Date.now() - focusStartTime;
-        if (duration >= thresholdMs) {
-          onFlagged(currentApp, duration);
-        }
+      const lowerTitle = windowTitle.toLowerCase();
+      const matched = titleKeywords.find((kw) => lowerTitle.includes(kw.toLowerCase()));
+
+      if (!matched) {
+        currentMatch = null;
+        return;
+      }
+
+      if (matched !== currentMatch) {
+        currentMatch = matched;
+        matchStartTime = Date.now();
+        alreadyFlaggedForThisMatch = false;
+        return;
+      }
+
+      const duration = Date.now() - matchStartTime;
+      if (duration >= thresholdMs && !alreadyFlaggedForThisMatch) {
+        alreadyFlaggedForThisMatch = true; // don't re-fire every poll after threshold
+        onFlagged(matched, duration);
       }
     } catch (err) {
       console.warn("focusWatcher check failed:", err.message);
@@ -60,4 +101,4 @@ function watchFocus({ watchedApps, thresholdMs, onFlagged, intervalMs = 5000 }) 
   return () => clearInterval(interval); // call this to stop watching
 }
 
-module.exports = { getFocusedApp, watchFocus };
+module.exports = { getFocusedWindow, watchFocus };

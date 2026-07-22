@@ -24,8 +24,14 @@ const fs = require("fs");
 /**
  * Productivity rule config. Edit these to change what counts as
  * "watched" and how long before Vivian steps in.
+ *
+ * IMPORTANT: this watches for specific SITE keywords in the browser's
+ * window title — not the browser app as a whole. So studying on Firefox
+ * for an hour won't trigger anything; only having one of these keywords
+ * in the title for that long will.
  */
-const WATCHED_APPS = ["Firefox"]; // apps that trigger a check-in if focused too long
+const WATCHED_APP = "Firefox";
+const WATCHED_TITLE_KEYWORDS = ["character.ai", "c.ai"]; // add more sites here
 const FOCUS_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
 const BLOCK_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -62,29 +68,29 @@ function createWindow() {
  */
 function startProductivityWatch() {
   stopFocusWatch = watchFocus({
-    watchedApps: WATCHED_APPS,
+    app: WATCHED_APP,
+    titleKeywords: WATCHED_TITLE_KEYWORDS,
     thresholdMs: FOCUS_THRESHOLD_MS,
-    onFlagged: async (appName, durationMs) => {
+    onFlagged: async (matchedKeyword, durationMs) => {
       if (currentlyBlocking) return; // don't stack triggers while already blocked
 
       try {
-        const result = await checkProductivity(appName);
+        const result = await checkProductivity(matchedKeyword);
         console.log("Screen check result:", result);
 
         if (result.verdict === "distracted") {
           currentlyBlocking = true;
-          await closeApp(appName);
+          await closeApp(WATCHED_APP);
 
-          const unblock = blockApp(appName, BLOCK_DURATION_MS);
+          blockApp(WATCHED_APP, BLOCK_DURATION_MS);
           setTimeout(() => {
             currentlyBlocking = false;
           }, BLOCK_DURATION_MS);
 
           if (mainWindow) {
-            mainWindow.webContents.send("chat:token", "");
             mainWindow.webContents.send(
               "productivity:intervened",
-              `Closed ${appName} — that's been open a while. Taking a ${BLOCK_DURATION_MS / 60000}-minute break from it.`
+              `Closed Firefox — "${matchedKeyword}" has been open a while. Taking a ${BLOCK_DURATION_MS / 60000}-minute break from it.`
             );
           }
         }

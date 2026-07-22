@@ -66,10 +66,20 @@ permission to your terminal/Electron app the first time it runs — macOS
 will prompt automatically.
 
 **Current rule** (edit constants at the top of `src/main/main.js`):
-- Watches: Firefox (add more app names to `WATCHED_APPS`)
-- Threshold: 1 hour focused before a check-in (`FOCUS_THRESHOLD_MS`)
-- If the vision model says "distracted": closes the app and blocks it
+- Watches: the browser app (`WATCHED_APP`, default "Firefox") — but only
+  triggers when specific SITE keywords appear in the window's title
+  (`WATCHED_TITLE_KEYWORDS`, default `["character.ai", "c.ai"]`), not just
+  for having the browser open. Studying on Firefox with a different tab
+  title won't trigger anything.
+- Works with private/incognito windows — the page title still shows in
+  the title bar regardless of browsing mode.
+- Threshold: 1 hour with a watched keyword in the title before a check-in
+  (`FOCUS_THRESHOLD_MS`)
+- If the vision model says "distracted": closes Firefox and blocks it
   from reopening for 2 hours (`BLOCK_DURATION_MS`)
+- Add more sites by adding keywords to `WATCHED_TITLE_KEYWORDS` — matching
+  is case-insensitive and checks if the keyword appears anywhere in the
+  title, so partial matches work (e.g. "c.ai" catches most c.ai tab titles)
 
 ## Notes on design decisions
 
