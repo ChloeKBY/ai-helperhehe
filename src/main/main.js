@@ -129,26 +129,30 @@ app.on("window-all-closed", () => {
 
 // Chat: renderer sends a user message, main streams tokens back
 ipcMain.handle("chat:send", async (event, userMessage) => {
-  const running = await ollamaClient.isOllamaRunning();
-  if (!running) {
-    return { error: "Ollama isn't running. Start it and try again." };
+  try {
+    const running = await ollamaClient.isOllamaRunning();
+    if (!running) {
+      return { error: "Ollama isn't running. Start it with `ollama serve` and try again." };
+    }
+
+    const personalityTemplate = fs.readFileSync(
+      path.join(__dirname, "../ollama/personalityPrompt.txt"),
+      "utf-8"
+    );
+    const memoryContext = memoryManager.formatForPrompt();
+    const systemPrompt = personalityTemplate.replace("{{MEMORY_CONTEXT}}", memoryContext);
+
+    let fullResponse = "";
+    await ollamaClient.streamChat(systemPrompt, userMessage, (token) => {
+      fullResponse += token;
+      event.sender.send("chat:token", token);
+    });
+
+    return { fullResponse };
+  } catch (err) {
+    console.error("chat:send failed:", err);
+    return { error: `Something went wrong: ${err.message}` };
   }
-
-  const personalityTemplate = fs.readFileSync(
-    path.join(__dirname, "../ollama/personalityPrompt.txt"),
-    "utf-8"
-  );
-  const memoryContext = memoryManager.formatForPrompt();
-  const systemPrompt = personalityTemplate.replace("{{MEMORY_CONTEXT}}", memoryContext);
-
-  let fullResponse = "";
-  await ollamaClient.streamChat(systemPrompt, userMessage, (token) => {
-    fullResponse += token;
-    // Push each token to the renderer as it arrives
-    event.sender.send("chat:token", token);
-  });
-
-  return { fullResponse };
 });
 
 // Memory: renderer can request current memory (read-only from that side)

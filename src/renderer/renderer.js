@@ -44,13 +44,18 @@ async function handleSend() {
 
   clearTimeout(hideBubbleTimeout);
 
-  const result = await window.vivian.sendMessage(message);
+  try {
+    const result = await window.vivian.sendMessage(message);
 
-  if (result.error) {
-    speechBubble.textContent = `(${result.error})`;
+    if (result.error) {
+      speechBubble.textContent = `(${result.error})`;
+      setSprite("stern");
+    } else {
+      setSprite("idle");
+    }
+  } catch (err) {
+    speechBubble.textContent = `(Something broke: ${err.message})`;
     setSprite("stern");
-  } else {
-    setSprite("idle");
   }
 
   scheduleHideBubble();
