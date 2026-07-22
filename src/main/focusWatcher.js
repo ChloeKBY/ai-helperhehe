@@ -17,23 +17,34 @@
  */
 
 const { exec } = require("child_process");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const SCRIPT_PATH = path.join(os.tmpdir(), "vivian-focus-check.scpt");
+
+// Written once to a temp file rather than passed as a single-line `-e`
+// string — AppleScript needs real line breaks between statements, and
+// collapsing them into spaces (an earlier bug here) causes syntax errors.
+const APPLESCRIPT_SOURCE = `
+tell application "System Events"
+  set frontApp to name of first application process whose frontmost is true
+  set frontWindowTitle to ""
+  try
+    tell process frontApp
+      set frontWindowTitle to name of front window
+    end try
+  end try
+  return frontApp & "|||" & frontWindowTitle
+end tell
+`;
+
+fs.writeFileSync(SCRIPT_PATH, APPLESCRIPT_SOURCE);
 
 /** Returns { appName, windowTitle } for whatever's currently focused. */
 function getFocusedWindow() {
   return new Promise((resolve, reject) => {
-    const script = `
-      tell application "System Events"
-        set frontApp to name of first application process whose frontmost is true
-        set frontWindowTitle to ""
-        try
-          tell process frontApp
-            set frontWindowTitle to name of front window
-          end try
-        end try
-        return frontApp & "|||" & frontWindowTitle
-      end tell
-    `;
-    exec(`osascript -e '${script.replace(/\n/g, " ")}'`, (err, stdout) => {
+    exec(`osascript "${SCRIPT_PATH}"`, (err, stdout) => {
       if (err) return reject(err);
       const [appName, windowTitle] = stdout.trim().split("|||");
       resolve({ appName: appName || "", windowTitle: windowTitle || "" });
