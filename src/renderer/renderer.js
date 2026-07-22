@@ -40,7 +40,7 @@ async function handleSend() {
   currentResponse = "";
   speechBubble.classList.add("visible");
   speechBubble.textContent = "...";
-  setSprite("thinking");
+  setSprite("confused"); // "thinking" face while waiting on a response
 
   clearTimeout(hideBubbleTimeout);
 
@@ -49,13 +49,13 @@ async function handleSend() {
 
     if (result.error) {
       speechBubble.textContent = `(${result.error})`;
-      setSprite("stern");
+      setSprite("uncomfortable");
     } else {
-      setSprite("idle");
+      setSprite("happy");
     }
   } catch (err) {
     speechBubble.textContent = `(Something broke: ${err.message})`;
-    setSprite("stern");
+    setSprite("uncomfortable");
   }
 
   scheduleHideBubble();
@@ -72,7 +72,7 @@ window.vivian.onIntervention((message) => {
   currentResponse = message;
   speechBubble.classList.add("visible");
   speechBubble.textContent = currentResponse;
-  setSprite("stern");
+  setSprite("upset");
   scheduleHideBubble();
 });
 
@@ -81,12 +81,26 @@ function scheduleHideBubble() {
   clearTimeout(hideBubbleTimeout);
   hideBubbleTimeout = setTimeout(() => {
     speechBubble.classList.remove("visible");
+    setSprite("idle"); // back to neutral once she's done talking
   }, 8000);
 }
 
-/** Swaps the sprite image based on emotional state. */
+/**
+ * Swaps the sprite image based on emotional state.
+ * "idle" maps to the neutral expression (idle.png) — the rest use Evie's
+ * actual expression names directly: confused, dumbfounded, happy,
+ * surprised, uncomfortable, upset.
+ */
 function setSprite(state) {
-  const validStates = ["idle", "thinking", "stern", "excited", "disappointed"];
+  const validStates = [
+    "idle",
+    "confused",
+    "dumbfounded",
+    "happy",
+    "surprised",
+    "uncomfortable",
+    "upset"
+  ];
   if (!validStates.includes(state)) state = "idle";
   sprite.src = `../../assets/pngtuber/${state}.png`;
 }

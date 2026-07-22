@@ -53,9 +53,13 @@ launchctl setenv OLLAMA_KEEP_ALIVE 5m
 `src/main/main.js`) instead of the real 1-hour default — change this back
 before relying on it day-to-day, or it'll trigger way too fast.
 
+**Sprite assets:** now using the real Evie character set (art by
+@Blob_the_Alien) instead of a placeholder — `idle` (neutral), `confused`,
+`dumbfounded`, `happy`, `surprised`, `uncomfortable`, `upset`. Mapped as:
+confused while waiting on a reply, happy on success, uncomfortable on
+error, upset during a productivity intervention, idle otherwise.
+
 **Not yet built (next steps):**
-- ⬜ PNG assets — using an idle.png placeholder only for now. thinking/
-  stern/excited/disappointed states will fall back to idle until added.
 - ⬜ Photo-verification chore-checking flow (e.g. "has laundry been folded")
   — deferred in favor of screen-watching, may revisit later
 - ⬜ Notion integration (tasks + calendar sync)
