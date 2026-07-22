@@ -33,7 +33,7 @@ const fs = require("fs");
  */
 const WATCHED_APP = "Firefox";
 const WATCHED_TITLE_KEYWORDS = ["character.ai", "c.ai"]; // add more sites here
-const FOCUS_THRESHOLD_MS = 5 * 60 * 1000; // TESTING: 5 minutes (change back to 60*60*1000 for real use)
+const FOCUS_THRESHOLD_MS = 30 * 1000; // TESTING: 30 seconds (change back to 60*60*1000 for real use)
 const BLOCK_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 let stopFocusWatch = null;
