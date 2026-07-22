@@ -36,6 +36,14 @@ const WATCHED_TITLE_KEYWORDS = ["character.ai", "c.ai"]; // add more sites here
 const FOCUS_THRESHOLD_MS = 30 * 1000; // TESTING: 30 seconds (change back to 60*60*1000 for real use)
 const BLOCK_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 
+const { startCAIMonitoring } = require("./screenWatcher");
+
+app.whenReady().then(() => {
+  createWindow();
+  startCAIMonitoring();
+});
+
+
 let stopFocusWatch = null;
 let currentlyBlocking = false; // prevents re-triggering while already blocked
 
