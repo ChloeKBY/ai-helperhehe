@@ -164,4 +164,11 @@ ipcMain.handle("memory:update", async (event, { key, value }) => {
   return memoryManager.update(key, value);
 });
 
+// Manual window dragging: renderer sends mouse deltas while dragging
+ipcMain.on("window:moveBy", (event, { dx, dy }) => {
+  if (!mainWindow) return;
+  const [x, y] = mainWindow.getPosition();
+  mainWindow.setPosition(x + dx, y + dy);
+});
+
 module.exports = { mainWindow };

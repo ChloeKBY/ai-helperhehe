@@ -24,5 +24,9 @@ contextBridge.exposeInMainWorld("vivian", {
   // Fires when the productivity watcher intervenes (e.g. closed an app)
   onIntervention: (callback) => {
     ipcRenderer.on("productivity:intervened", (event, message) => callback(message));
-  }
+  },
+
+  // Manual window dragging (since the sprite needs to handle clicks too,
+  // which -webkit-app-region: drag blocks)
+  moveWindowBy: (dx, dy) => ipcRenderer.send("window:moveBy", { dx, dy })
 });
