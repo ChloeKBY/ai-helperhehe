@@ -19,6 +19,7 @@ const memoryManager = require("../memory/memoryManager");
 const { watchFocus } = require("./focusWatcher");
 const { checkProductivity } = require("./screenWatcher");
 const { closeApp, blockApp } = require("./processWatcher");
+const { dragMouseToCorner } = require("./mouseControl");
 const fs = require("fs");
 
 /**
@@ -32,7 +33,7 @@ const fs = require("fs");
  */
 const WATCHED_APP = "Firefox";
 const WATCHED_TITLE_KEYWORDS = ["character.ai", "c.ai"]; // add more sites here
-const FOCUS_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+const FOCUS_THRESHOLD_MS = 5 * 60 * 1000; // TESTING: 5 minutes (change back to 60*60*1000 for real use)
 const BLOCK_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 let stopFocusWatch = null;
@@ -81,6 +82,12 @@ function startProductivityWatch() {
         if (result.verdict === "distracted") {
           currentlyBlocking = true;
           await closeApp(WATCHED_APP);
+
+          try {
+            await dragMouseToCorner("bottom-right");
+          } catch (err) {
+            console.warn("Mouse drag failed (cliclick installed?):", err.message);
+          }
 
           blockApp(WATCHED_APP, BLOCK_DURATION_MS);
           setTimeout(() => {

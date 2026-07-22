@@ -10,6 +10,7 @@ nothing to run.
 - Node.js + npm
 - [Ollama](https://ollama.com) installed
 - A pulled model: `ollama pull phi3:mini` (or `gemma2:2b` for something even lighter)
+- `cliclick` for the mouse-drag intervention: `brew install cliclick`
 
 ## Setup
 
@@ -42,9 +43,15 @@ launchctl setenv OLLAMA_KEEP_ALIVE 5m
   ("focused" vs "distracted") only when focus-watcher flags a watched app
   has been open past the threshold — not continuous polling
 - ✅ Process control (close/block apps) wired to the productivity rule:
-  watched app open > 1hr AND flagged "distracted" → app closes and is
-  blocked from reopening for 2hrs, with a message shown in the chat bubble
+  watched site keyword focused past threshold AND flagged "distracted" →
+  app closes, mouse cursor drags to the corner (playful nudge), and the
+  app is blocked from reopening for 2hrs, with a message shown in the
+  chat bubble
 - ✅ `.gitignore` (node_modules, .env, etc. excluded from commits)
+
+**⚠️ Currently set to a 5-minute TEST threshold** (`FOCUS_THRESHOLD_MS` in
+`src/main/main.js`) instead of the real 1-hour default — change this back
+before relying on it day-to-day, or it'll trigger way too fast.
 
 **Not yet built (next steps):**
 - ⬜ PNG assets — using an idle.png placeholder only for now. thinking/
