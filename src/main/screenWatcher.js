@@ -97,7 +97,7 @@ function startCAIMonitoring() {
       // cycle, forever, even when Firefox wasn't even open.
       const { appName } = await getFocusedWindow();
       console.log(`[screenWatcher] focused app: "${appName}" (target: "${TARGET_BROWSER}")`); // remove once confirmed working
-      if (appName !== TARGET_BROWSER) {
+      if (appName.toLowerCase() !== TARGET_BROWSER.toLowerCase()) {
         caiDetectedAt = null; // not even in the browser — nothing to track
         return;
       }
