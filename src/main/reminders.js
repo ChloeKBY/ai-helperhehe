@@ -7,6 +7,7 @@
  */
 
 const { exec } = require("child_process");
+const memoryManager = require("../memory/memoryManager");
 
 const activeReminders = new Map(); // id -> the interval/timeout handle
 let nextId = 1;
@@ -16,11 +17,32 @@ function sanitize(text) {
   return String(text).replace(/"/g, '\\"');
 }
 
+/**
+ * If the user has set an "ntfy_topic" fact in userMemory.json, also pushes
+ * the notification to their phone via ntfy.sh (free, no account needed —
+ * they just install the ntfy app and subscribe to the same topic name).
+ */
+async function pushToPhone(message) {
+  const memory = memoryManager.load();
+  const fact = memory.facts.find((f) => f.key === "ntfy_topic");
+  if (!fact || !fact.value || fact.value.startsWith("PUT ")) return; // not configured, skip silently
+
+  try {
+    await fetch(`https://ntfy.sh/${encodeURIComponent(fact.value.trim())}`, {
+      method: "POST",
+      body: message
+    });
+  } catch (err) {
+    console.warn("Phone push failed (ntfy.sh unreachable?):", err.message);
+  }
+}
+
 function showNotification(title, message) {
   const script = `display notification "${sanitize(message)}" with title "${sanitize(title)}"`;
   exec(`osascript -e '${script}'`, (err) => {
     if (err) console.warn("Notification failed:", err.message);
   });
+  pushToPhone(message);
 }
 
 /**

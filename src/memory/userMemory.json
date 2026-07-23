@@ -1,6 +1,7 @@
 {
   "facts": [
     { "key": "timezone", "value": "PUT YOUR TIMEZONE HERE, e.g. America/Moncton" },
+    { "key": "ntfy_topic", "value": "PUT A UNIQUE TOPIC NAME HERE if you want phone notifications (optional) — see README" },
     { "key": "example_fact", "value": "replace this with a real fact about yourself, e.g. workout schedule, ongoing projects, preferences" }
   ]
 }

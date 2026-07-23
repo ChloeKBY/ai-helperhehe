@@ -14,6 +14,10 @@
 const fileManager = require("./fileManager");
 const reminders = require("./reminders");
 const { openApp } = require("./appLauncher");
+const windowManager = require("./windowManager");
+const finderTools = require("./finderTools");
+const webTools = require("./webTools");
+const timeTools = require("./timeTools");
 
 const TIME_UNIT_MS = {
   second: 1000,
@@ -23,6 +27,51 @@ const TIME_UNIT_MS = {
   hour: 60 * 60 * 1000,
   hours: 60 * 60 * 1000
 };
+
+/**
+ * Checks if "open X" actually means a website, Wikipedia article, or
+ * folder, rather than launching a Mac app. Returns a reply string if
+ * handled, or null to fall through to opening it as an app.
+ */
+async function tryHandleWebOrFolderOpen(appName) {
+  const lower = appName.toLowerCase().replace(/\s*(for me|please|for me please)$/i, "").trim();
+
+  // "open the wikipedia page about OCTOPUSES" / "open wikipedia page on X"
+  const wikiArticleMatch = lower.match(/^(?:the )?wikipedia page (?:about|on|for) (.+)/i);
+  if (wikiArticleMatch) {
+    const subject = wikiArticleMatch[1];
+    try {
+      await webTools.openWikipediaArticle(subject);
+      return `O-okay, opening the Wikipedia page for "${subject}"...!`;
+    } catch (err) {
+      return `Um, ${err.message}`;
+    }
+  }
+
+  // "open wikipedia" / "open pinterest" / any known site name
+  if (webTools.KNOWN_SITES[lower]) {
+    try {
+      await webTools.openKnownSite(lower);
+      return `O-okay, opening ${appName}...!`;
+    } catch (err) {
+      return `Um, ${err.message}`;
+    }
+  }
+
+  // "open folder X" / "open the X folder"
+  const folderMatch = lower.match(/^folder (.+)/i) || lower.match(/^(.+) folder$/i);
+  if (folderMatch) {
+    const folderName = folderMatch[1].trim();
+    try {
+      await finderTools.openFolder(folderName);
+      return `O-okay, opening the ${folderName} folder...!`;
+    } catch (err) {
+      return `Um, ${err.message}`;
+    }
+  }
+
+  return null; // not a website/folder — treat as a regular app name
+}
 
 /** Strips common polite/filler openers AND trailing punctuation so patterns match cleanly. */
 function stripFiller(message) {
@@ -44,12 +93,104 @@ async function tryHandleCommand(rawMessage) {
   if (openMatch) {
     const [, rawAppName] = openMatch;
     const appName = rawAppName.replace(/[?!.,]+$/, "").trim();
+
+    // Before treating this as "launch an app", check if it's actually one
+    // of the web/folder shortcuts below (they also start with "open").
+    const websiteReply = await tryHandleWebOrFolderOpen(appName);
+    if (websiteReply !== null) return websiteReply;
+
     try {
       await openApp(appName);
       return `O-okay, opening ${appName}...!`;
     } catch (err) {
       return `Eep— ${err.message}`;
     }
+  }
+
+  // "quit X" / "close X" — closes an app entirely
+  const quitMatch = message.match(/^(?:quit|close) (?:the )?(.+?)(?:\.app)?$/i);
+  if (quitMatch) {
+    const [, rawAppName] = quitMatch;
+    const appName = rawAppName.replace(/[?!.,]+$/, "").trim();
+
+    // "close this window" / "close the window" means the frontmost window,
+    // not an app named "window" or "this"
+    if (/^(this|the)?\s*window$/i.test(appName)) {
+      try {
+        await windowManager.closeFrontmostWindow();
+        return "O-okay, closing that window...!";
+      } catch (err) {
+        return `Um, I couldn't close that: ${err.message}`;
+      }
+    }
+
+    try {
+      await windowManager.quitApp(appName);
+      return `A-alright, quitting ${appName}...`;
+    } catch (err) {
+      return `Eep— couldn't quit ${appName}: ${err.message}`;
+    }
+  }
+
+  // "move the window to X" (corner positions)
+  const moveWindowMatch = message.match(
+    /move (?:the )?window to (?:the )?(top.left|top.right|bottom.left|bottom.right|center)/i
+  );
+  if (moveWindowMatch) {
+    const position = moveWindowMatch[1].toLowerCase().replace(/\s+/g, "-");
+    try {
+      await windowManager.moveFrontmostWindowTo(position);
+      return `M-moved it to the ${position.replace("-", " ")}!`;
+    } catch (err) {
+      return `Um, I couldn't move that window: ${err.message}`;
+    }
+  }
+
+  // "show the dock" / "hide the dock"
+  const dockMatch = message.match(/^(show|hide) (?:the )?dock$/i);
+  if (dockMatch) {
+    const wantVisible = dockMatch[1].toLowerCase() === "show";
+    try {
+      await windowManager.setDockVisible(wantVisible);
+      return wantVisible ? "There we go, dock's back!" : "O-okay, hiding the dock...";
+    } catch (err) {
+      return `Um, something went wrong with the dock: ${err.message}`;
+    }
+  }
+
+  // "find TERM in finder" — Spotlight search + reveal
+  const findMatch = message.match(/find (.+?) in finder/i);
+  if (findMatch) {
+    const [, term] = findMatch;
+    try {
+      const found = await finderTools.findAndRevealFolder(term.trim());
+      return `F-found it! ${found}`;
+    } catch (err) {
+      return `Um, ${err.message}`;
+    }
+  }
+
+  // "google X" / "search for X"
+  const googleMatch = message.match(/^(?:google|search for) (.+)/i);
+  if (googleMatch) {
+    const [, query] = googleMatch;
+    try {
+      await webTools.googleSearch(query.trim());
+      return `O-okay, searching for "${query.trim()}"...!`;
+    } catch (err) {
+      return `Um, ${err.message}`;
+    }
+  }
+
+  // "what time is it" / "what day is it" / "what's the date"
+  if (/what (?:time|day|date)/i.test(message) || /what's the (?:time|date)/i.test(message)) {
+    const timezone = timeTools.getUserTimezone();
+    if (!timezone) {
+      return "Um... I don't actually know your timezone yet! You can set it in userMemory.json.";
+    }
+    const time = timeTools.getCurrentTime();
+    const date = timeTools.getCurrentDate();
+    return `I-it's ${time} on ${date}!`;
   }
 
   // "remind me to X in Y minutes/seconds/hours"

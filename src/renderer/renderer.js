@@ -94,6 +94,7 @@ chatInput.addEventListener("keydown", (e) => {
 window.addEventListener("blur", () => {
   closeInput();
   speechBubble.classList.remove("visible");
+  setSprite("idle");
 });
 
 function closeInput() {

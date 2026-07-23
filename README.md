@@ -47,6 +47,31 @@ than a single regex now, but still not full language understanding. If a
 phrasing doesn't match, try rephrasing closer to the examples, or ask me
 to add more patterns.
 
+## New commands (this round)
+
+All typed directly into chat — she acts on these instead of just talking
+about them:
+
+- **Quit an app:** "quit Spotify", "close Discord"
+- **Close/move the frontmost window:** "close this window", "move the
+  window to top-left" (also: top-right, bottom-left, bottom-right, center)
+- **Dock:** "show the dock", "hide the dock"
+- **Open a folder in Finder:** "open the Downloads folder", "open folder
+  Screenshots"
+- **Find a folder you don't know the path to:** "find [name] in finder"
+  (uses Spotlight, then reveals it in Finder)
+- **Google something:** "google best pizza near me", "search for cat facts"
+- **Open specific sites in Firefox:** "open wikipedia", "open pinterest",
+  "open the wikipedia page about octopuses" — known sites are listed in
+  `src/main/webTools.js` (`KNOWN_SITES`), easy to add more
+- **Time/date (now actually correct):** "what time is it", "what day is
+  it" — reads your real timezone from `userMemory.json` instead of guessing
+- **Phone notifications (optional):** set `ntfy_topic` in `userMemory.json`
+  to any unique word (e.g. "evie-chloe-4821"), then install the free
+  **ntfy** app on your phone and subscribe to that same topic name — her
+  reminders will now also push to your phone. No account or API key needed.
+  Leave it as the placeholder to skip this entirely.
+
 ## Requirements
 
 - macOS
