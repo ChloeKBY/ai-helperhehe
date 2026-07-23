@@ -28,7 +28,7 @@ async function analyzeScreenForCAI() {
 
     const result = await moondream.answerQuestion(
       pngBuffer,
-      "Is the user currently on the website character.ai? Answer YES or NO only."
+      "Is the user currently on Wikipedia? Answer YES or NO only." // TEMP: testing with Wikipedia instead of character.ai — swap back after
     );
 
     const answer = String(result).toUpperCase().trim();
