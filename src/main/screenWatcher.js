@@ -35,9 +35,18 @@ async function captureScreenBuffer() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.size;
 
+  // Cap the captured size — sending a full-resolution Retina screenshot
+  // (which can be several MB as base64) to a small vision model like
+  // Moondream can silently fail/return empty instead of erroring. Scale
+  // down to a max width of 800px, keeping aspect ratio.
+  const maxWidth = 800;
+  const scale = Math.min(1, maxWidth / width);
+  const scaledWidth = Math.round(width * scale);
+  const scaledHeight = Math.round(height * scale);
+
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
-    thumbnailSize: { width, height }
+    thumbnailSize: { width: scaledWidth, height: scaledHeight }
   });
 
   if (!sources.length) {
