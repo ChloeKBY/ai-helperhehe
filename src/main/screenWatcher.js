@@ -96,6 +96,7 @@ function startCAIMonitoring() {
       // laptop heat, since Gemma 3 4B does real inference work every single
       // cycle, forever, even when Firefox wasn't even open.
       const { appName } = await getFocusedWindow();
+      console.log(`[screenWatcher] focused app: "${appName}" (target: "${TARGET_BROWSER}")`); // remove once confirmed working
       if (appName !== TARGET_BROWSER) {
         caiDetectedAt = null; // not even in the browser — nothing to track
         return;
