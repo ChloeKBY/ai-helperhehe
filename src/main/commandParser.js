@@ -24,10 +24,11 @@ const TIME_UNIT_MS = {
   hours: 60 * 60 * 1000
 };
 
-/** Strips common polite/filler openers so the core pattern matches cleanly. */
+/** Strips common polite/filler openers AND trailing punctuation so patterns match cleanly. */
 function stripFiller(message) {
   return message
     .replace(/^(can you|could you|would you|please|hey evie,?|evie,?)\s*/i, "")
+    .replace(/[?!.]+$/, "") // trailing punctuation, e.g. "open VLC?" -> "open VLC"
     .trim();
 }
 
@@ -41,10 +42,11 @@ async function tryHandleCommand(rawMessage) {
   // "open X" — launches an app by name
   const openMatch = message.match(/^open (?:the )?(.+?)(?:\.app)?$/i);
   if (openMatch) {
-    const [, appName] = openMatch;
+    const [, rawAppName] = openMatch;
+    const appName = rawAppName.replace(/[?!.,]+$/, "").trim();
     try {
-      await openApp(appName.trim());
-      return `O-okay, opening ${appName.trim()}...!`;
+      await openApp(appName);
+      return `O-okay, opening ${appName}...!`;
     } catch (err) {
       return `Eep— ${err.message}`;
     }
