@@ -23,7 +23,7 @@ const MODEL_NAME = "phi3:mini"; // swap to "gemma2:2b" if you want it lighter st
  * @returns {Promise<string>} the full assembled response
  */
 async function streamChat(systemPrompt, userMessage, onToken) {
-  const fullPrompt = `${systemPrompt}\n\nUser: ${userMessage}\nVivian:`;
+  const fullPrompt = `${systemPrompt}\n\nUser: ${userMessage}\nEvie:`;
 
   const response = await fetch(OLLAMA_URL, {
     method: "POST",
@@ -33,7 +33,8 @@ async function streamChat(systemPrompt, userMessage, onToken) {
       prompt: fullPrompt,
       stream: true,
       options: {
-        num_predict: 80 // hard cap on response length — keeps her replies short and snappy
+        num_predict: 80, // hard cap on response length — keeps her replies short and snappy
+        stop: ["\nUser:", "\nuser:", "User:", "\nEvie:", "---", "Now let's"] // prevents the model from hallucinating fake continuations of the conversation
       }
     })
   });

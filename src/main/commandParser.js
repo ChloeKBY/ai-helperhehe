@@ -13,6 +13,7 @@
 
 const fileManager = require("./fileManager");
 const reminders = require("./reminders");
+const { openApp } = require("./appLauncher");
 
 const TIME_UNIT_MS = {
   second: 1000,
@@ -26,16 +27,28 @@ const TIME_UNIT_MS = {
 /** Strips common polite/filler openers so the core pattern matches cleanly. */
 function stripFiller(message) {
   return message
-    .replace(/^(can you|could you|would you|please|hey vivian,?|vivian,?)\s*/i, "")
+    .replace(/^(can you|could you|would you|please|hey evie,?|evie,?)\s*/i, "")
     .trim();
 }
 
 /**
  * Tries to parse and execute a command from the user's message.
- * @returns {string|null} a confirmation message if a command matched, else null
+ * @returns {Promise<string|null>} a confirmation message if a command matched, else null
  */
-function tryHandleCommand(rawMessage) {
+async function tryHandleCommand(rawMessage) {
   const message = stripFiller(rawMessage);
+
+  // "open X" — launches an app by name
+  const openMatch = message.match(/^open (?:the )?(.+?)(?:\.app)?$/i);
+  if (openMatch) {
+    const [, appName] = openMatch;
+    try {
+      await openApp(appName.trim());
+      return `O-okay, opening ${appName.trim()}...!`;
+    } catch (err) {
+      return `Eep— ${err.message}`;
+    }
+  }
 
   // "remind me to X in Y minutes/seconds/hours"
   const reminderMatch = message.match(

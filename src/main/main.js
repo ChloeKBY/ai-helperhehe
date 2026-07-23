@@ -68,7 +68,7 @@ ipcMain.handle("chat:send", async (event, userMessage) => {
     // Check for a recognized command (reminder, file move, organize) first —
     // if it matches, act on it directly instead of asking the LLM to "chat"
     // about doing something without actually doing it.
-    const commandReply = tryHandleCommand(userMessage);
+    const commandReply = await tryHandleCommand(userMessage);
     if (commandReply !== null) {
       event.sender.send("chat:token", commandReply);
       historyManager.appendMessage("vivian", commandReply);

@@ -1,10 +1,10 @@
-# Vivian — Personal PNGtuber AI Companion
+# Evie — Personal PNGtuber AI Companion
 
 A macOS Electron app: a transparent, always-on-top PNGtuber character that
 chats using a **local** LLM (via Ollama) instead of a paid API, so it costs
 nothing to run.
 
-## Editing what Vivian knows about you
+## Editing what Evie knows about you
 
 There are now TWO memory files, both feeding into her prompt:
 
@@ -64,7 +64,7 @@ npm start
 ```
 
 Ollama should be running in the background (the Ollama app, or `ollama serve`
-in a terminal) before you launch Vivian.
+in a terminal) before you launch Evie.
 
 To keep RAM usage low, the model unloads itself after 5 minutes of no use:
 
