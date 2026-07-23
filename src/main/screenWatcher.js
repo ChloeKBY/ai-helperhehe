@@ -19,7 +19,7 @@ const { dragMouseToCorner } = require("./mouseControl");
 const { showNotification } = require("./reminders");
 
 // Which site to watch for. Swap "character.ai" for whatever you're testing.
-const TARGET_SITE_QUESTION = "Wikipedia";
+const TARGET_SITE_QUESTION =
   "Is the user currently on the website character.ai? Answer YES or NO only.";
 
 // If you switch browsers (e.g. to Orion instead of Firefox), update this —
@@ -51,6 +51,7 @@ async function analyzeScreenForCAI() {
   const pngBuffer = await captureScreenBuffer(); // let errors bubble up — caller handles them
   const result = await moondream.answerQuestion(pngBuffer, TARGET_SITE_QUESTION);
   const answer = String(result).toUpperCase().trim();
+  console.log(`[screenWatcher] raw model answer: "${result}"`); // remove once you trust it's working
   return answer.includes("YES");
 }
 
