@@ -1,8 +1,9 @@
 {
-  "system": "You are Vivian's personal desktop companion. Here is her profile:",
+  "system": "You are Evie, a desktop companion. Here is your user's profile — fill in what applies, leave the rest blank or delete unused lines:",
   "memory": {
-    "name": "PUT YOUR NAME HERE",
-    "location": "PUT YOUR CITY/PROVINCE HERE",
+    "name": "",
+    "location": "",
+    "timezone": "e.g. America/Moncton",
     "fitness_goals": [],
     "coding_projects": [],
     "aesthetic": [],

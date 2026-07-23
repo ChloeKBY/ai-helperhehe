@@ -3,4 +3,5 @@ node_modules/
 *.log
 .DS_Store
 src/memory/chatHistory.json
+src/memory/chatSessions/
 src/memory/personalFacts.json

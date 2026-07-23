@@ -1,10 +1,35 @@
+/**
+ * screenWatcher.js
+ *
+ * Periodically screenshots the screen and asks a local vision model
+ * (Moondream via Ollama) whether the target site/app is currently open.
+ * If it's been open past the threshold, triggers an intervention
+ * (mouse drag + closing/blocking the browser).
+ *
+ * IMPORTANT: this requires `ollama pull moondream` to have been run once.
+ * If that model isn't pulled, EVERY check fails silently unless you're
+ * watching the terminal — this version now surfaces repeated failures as
+ * an actual macOS notification so it's not a silent, invisible bug.
+ */
+
 const { desktopCapturer, screen } = require("electron");
 const moondream = require("../moondream/moondream");
 const { blockFirefox } = require("./firefoxBlocker");
 const { dragMouseToCorner } = require("./mouseControl");
+const { showNotification } = require("./reminders");
+
+// Which site to watch for. Swap "character.ai" for whatever you're testing.
+const TARGET_SITE_QUESTION =
+  "Is the user currently on the website character.ai? Answer YES or NO only.";
+
+// If you switch browsers (e.g. to Orion instead of Firefox), update this —
+// it's the app name used for the close/block intervention.
+const TARGET_BROWSER = "Firefox";
 
 let caiDetectedAt = null;
 let interventionInProgress = false;
+let consecutiveFailures = 0;
+let hasWarnedAboutFailures = false;
 
 async function captureScreenBuffer() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -23,20 +48,10 @@ async function captureScreenBuffer() {
 }
 
 async function analyzeScreenForCAI() {
-  try {
-    const pngBuffer = await captureScreenBuffer();
-
-    const result = await moondream.answerQuestion(
-      pngBuffer,
-      "Is the user currently on Wikipedia? Answer YES or NO only." // TEMP: testing with Wikipedia instead of character.ai — swap back after
-    );
-
-    const answer = String(result).toUpperCase().trim();
-    return answer.includes("YES");
-  } catch (err) {
-    console.error("Moondream screen analysis failed:", err);
-    return false;
-  }
+  const pngBuffer = await captureScreenBuffer(); // let errors bubble up — caller handles them
+  const result = await moondream.answerQuestion(pngBuffer, TARGET_SITE_QUESTION);
+  const answer = String(result).toUpperCase().trim();
+  return answer.includes("YES");
 }
 
 async function performCAIIntervention() {
@@ -45,9 +60,9 @@ async function performCAIIntervention() {
 
   try {
     await dragMouseToCorner("bottom-right");
-    blockFirefox();
+    blockFirefox(); // NOTE: targets Firefox specifically — see TARGET_BROWSER above
   } catch (err) {
-    console.error("CAI intervention failed:", err);
+    console.error("Intervention failed:", err);
   } finally {
     setTimeout(() => {
       interventionInProgress = false;
@@ -59,8 +74,10 @@ async function performCAIIntervention() {
 function startCAIMonitoring() {
   setInterval(async () => {
     try {
-      const isOnCAI = await analyzeScreenForCAI();
-      if (isOnCAI) {
+      const isOnTarget = await analyzeScreenForCAI();
+      consecutiveFailures = 0; // a successful check (true OR false) resets the failure count
+
+      if (isOnTarget) {
         if (!caiDetectedAt) {
           caiDetectedAt = Date.now();
         }
@@ -73,7 +90,18 @@ function startCAIMonitoring() {
         caiDetectedAt = null;
       }
     } catch (err) {
-      console.warn("CAI monitoring loop error:", err);
+      console.warn("Screen monitoring check failed:", err.message);
+      consecutiveFailures++;
+
+      // After several failures in a row, this is clearly broken (not just a
+      // one-off blip) — tell the user instead of failing silently forever.
+      if (consecutiveFailures >= 3 && !hasWarnedAboutFailures) {
+        hasWarnedAboutFailures = true;
+        showNotification(
+          "Evie",
+          "Screen watching keeps failing — check that `ollama pull moondream` has been run, and that Screen Recording permission is granted."
+        );
+      }
     }
   }, 8000);
 }

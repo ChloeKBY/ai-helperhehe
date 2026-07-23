@@ -1,32 +1,63 @@
 /**
  * historyManager.js
  *
- * Persists the conversation to disk (src/memory/chatHistory.json) so it
- * survives app restarts — unlike the old in-memory-only version, which
- * lost everything when you quit.
+ * Persists chat history as SEPARATE SESSION FILES (one JSON file per
+ * conversation), instead of one shared file — so hitting "New Chat"
+ * starts a fresh session without erasing the previous one. All sessions
+ * are saved permanently in src/memory/chatSessions/ and can be reloaded.
  */
 
 const fs = require("fs");
 const path = require("path");
 
-const HISTORY_PATH = path.join(__dirname, "..", "memory", "chatHistory.json");
+const SESSIONS_DIR = path.join(__dirname, "..", "memory", "chatSessions");
+const CURRENT_SESSION_PATH = path.join(SESSIONS_DIR, "_current.json");
 
+function ensureDir() {
+  if (!fs.existsSync(SESSIONS_DIR)) {
+    fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+  }
+}
+
+function getCurrentSessionId() {
+  ensureDir();
+  if (!fs.existsSync(CURRENT_SESSION_PATH)) {
+    const id = `session-${Date.now()}`;
+    fs.writeFileSync(CURRENT_SESSION_PATH, JSON.stringify({ currentId: id }));
+    return id;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(CURRENT_SESSION_PATH, "utf-8")).currentId;
+  } catch {
+    const id = `session-${Date.now()}`;
+    fs.writeFileSync(CURRENT_SESSION_PATH, JSON.stringify({ currentId: id }));
+    return id;
+  }
+}
+
+function sessionFilePath(id) {
+  return path.join(SESSIONS_DIR, `${id}.json`);
+}
+
+/** Loads the currently active session's messages. */
 function load() {
-  if (!fs.existsSync(HISTORY_PATH)) {
+  const id = getCurrentSessionId();
+  const filePath = sessionFilePath(id);
+  if (!fs.existsSync(filePath)) {
     const blank = { messages: [] };
-    fs.writeFileSync(HISTORY_PATH, JSON.stringify(blank, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(blank, null, 2));
     return blank;
   }
   try {
-    return JSON.parse(fs.readFileSync(HISTORY_PATH, "utf-8"));
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
   } catch {
-    // Corrupted file — start fresh rather than crashing the app
     return { messages: [] };
   }
 }
 
 function save(historyObj) {
-  fs.writeFileSync(HISTORY_PATH, JSON.stringify(historyObj, null, 2));
+  const id = getCurrentSessionId();
+  fs.writeFileSync(sessionFilePath(id), JSON.stringify(historyObj, null, 2));
 }
 
 /** Appends one message ({role: "user"|"vivian", text}) with a timestamp. */
@@ -37,9 +68,44 @@ function appendMessage(role, text) {
   return history;
 }
 
-/** Wipes the entire persisted history (used by the "New chat" action). */
-function clear() {
-  save({ messages: [] });
+/**
+ * Starts a brand new session — the OLD session's file is kept on disk
+ * untouched, this just points "current" at a new empty one.
+ */
+function startNewSession() {
+  ensureDir();
+  const id = `session-${Date.now()}`;
+  fs.writeFileSync(CURRENT_SESSION_PATH, JSON.stringify({ currentId: id }));
+  fs.writeFileSync(sessionFilePath(id), JSON.stringify({ messages: [] }, null, 2));
+  return id;
 }
 
-module.exports = { load, save, appendMessage, clear };
+/** Lists all saved sessions (id + first message preview + timestamp), most recent first. */
+function listSessions() {
+  ensureDir();
+  const files = fs
+    .readdirSync(SESSIONS_DIR)
+    .filter((f) => f.endsWith(".json") && f !== "_current.json");
+
+  const sessions = files.map((f) => {
+    const id = f.replace(/\.json$/, "");
+    const data = JSON.parse(fs.readFileSync(path.join(SESSIONS_DIR, f), "utf-8"));
+    const firstUserMsg = data.messages.find((m) => m.role === "user");
+    return {
+      id,
+      preview: firstUserMsg ? firstUserMsg.text.slice(0, 40) : "(empty)",
+      messageCount: data.messages.length,
+      timestamp: parseInt(id.replace("session-", ""), 10) || 0
+    };
+  });
+
+  return sessions.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+/** Switches the active session to a previously saved one. */
+function switchToSession(id) {
+  ensureDir();
+  fs.writeFileSync(CURRENT_SESSION_PATH, JSON.stringify({ currentId: id }));
+}
+
+module.exports = { load, save, appendMessage, startNewSession, listSessions, switchToSession };

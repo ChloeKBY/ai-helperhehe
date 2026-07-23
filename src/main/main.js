@@ -107,7 +107,7 @@ ipcMain.handle("history:get", async () => {
 });
 
 ipcMain.handle("history:clear", async () => {
-  historyManager.clear();
+  historyManager.startNewSession();
   return { cleared: true };
 });
 

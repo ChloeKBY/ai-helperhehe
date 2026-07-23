@@ -120,20 +120,20 @@ async function handleSend() {
 
   speechBubble.classList.add("visible");
   renderConversation();
-  setSprite("confused"); // "thinking" face while waiting on a response
+  setSprite("confuse"); // thinking face while waiting
 
   try {
     const result = await window.vivian.sendMessage(message);
 
     if (result.error) {
       conversation[streamingIndex].text = `(${result.error})`;
-      setSprite("uncomfortable");
+      setSprite("stern");
     } else {
-      setSprite("happy");
+      setSprite("soft");
     }
   } catch (err) {
     conversation[streamingIndex].text = `(Something broke: ${err.message})`;
-    setSprite("uncomfortable");
+    setSprite("stern");
   }
 
   renderConversation();
@@ -143,6 +143,7 @@ async function handleSend() {
 window.vivian.onToken((token) => {
   if (streamingIndex === -1) return;
   conversation[streamingIndex].text += token;
+  setSprite("talking");
   renderConversation();
 });
 
@@ -151,7 +152,7 @@ window.vivian.onIntervention((message) => {
   conversation.push({ role: "vivian", text: message });
   speechBubble.classList.add("visible");
   renderConversation();
-  setSprite("upset");
+  setSprite("stern_talking");
 });
 
 /** Redraws the whole conversation transcript inside the scrollable bubble. */
@@ -169,20 +170,20 @@ function renderConversation() {
 }
 
 /**
- * Swaps the sprite image based on emotional state.
- * "idle" maps to the neutral expression (idle.png) — the rest use Evie's
- * actual expression names directly: confused, dumbfounded, happy,
- * surprised, uncomfortable, upset.
+ * Swaps the sprite image based on emotional state, using the new
+ * expression set: idle, idle_2 (alt idle), talking, stern_talking,
+ * stern, confuse, soft, mlem.
  */
 function setSprite(state) {
   const validStates = [
     "idle",
-    "confused",
-    "dumbfounded",
-    "happy",
-    "surprised",
-    "uncomfortable",
-    "upset"
+    "idle_2",
+    "talking",
+    "stern_talking",
+    "stern",
+    "confuse",
+    "soft",
+    "mlem"
   ];
   if (!validStates.includes(state)) state = "idle";
   sprite.src = `../../assets/pngtuber/${state}.png`;

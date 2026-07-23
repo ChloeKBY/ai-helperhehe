@@ -20,8 +20,7 @@
     }
 
     /* Reserved space ABOVE the sprite, inside the actual window bounds,
-       so the bubble/input never get clipped off the top of the window
-       (a bug in an earlier version — they were positioned above y=0). */
+       so the bubble/input never get clipped off the top of the window. */
     #stage {
       flex: 0 0 150px;
       position: relative;
@@ -35,65 +34,81 @@
       cursor: pointer;
     }
 
+    /* Speech bubble: white with a salmon-orange border, rounded like an
+       actual speech bubble (not a plain rectangle), with a matching tail. */
     #speechBubble {
       position: absolute;
-      bottom: 40px;
+      bottom: 44px;
       left: 50%;
       transform: translateX(-50%);
-      width: 190px;
-      max-height: 100px;
+      width: 195px;
+      max-height: 105px;
       overflow-y: auto;
-      background: rgba(20, 15, 25, 0.92);
-      color: #e8dfff;
-      font-family: Georgia, serif;
+      background: #ffffff;
+      border: 2.5px solid #ff9d76;
+      color: #4a3f3a;
+      font-family: -apple-system, "Segoe UI", sans-serif;
       font-size: 12px;
-      line-height: 1.4;
-      padding: 6px 9px;
-      border-radius: 8px;
+      line-height: 1.45;
+      padding: 8px 11px;
+      border-radius: 18px 18px 18px 6px; /* rounded, one corner pulled in for a speech-bubble feel */
+      box-shadow: 0 2px 8px rgba(255, 157, 118, 0.25);
       -webkit-app-region: no-drag;
       display: none;
     }
     #speechBubble.visible {
       display: block;
     }
+    /* Tail: two stacked triangles (border color + white fill) so it looks
+       like a proper speech-bubble point instead of a plain rectangle tab. */
+    #speechBubble::before {
+      content: "";
+      position: absolute;
+      bottom: -11px;
+      left: 22px;
+      border: 7px solid transparent;
+      border-top-color: #ff9d76;
+    }
     #speechBubble::after {
       content: "";
       position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 6px solid transparent;
-      border-top-color: rgba(20, 15, 25, 0.92);
+      bottom: -7.5px;
+      left: 24px;
+      border: 5.5px solid transparent;
+      border-top-color: #ffffff;
     }
 
     .msg-user {
-      color: #b8a8d8;
+      color: #d98a5f;
       margin-bottom: 4px;
     }
     .msg-user::before {
       content: "You: ";
-      font-weight: bold;
+      font-weight: 600;
     }
     .msg-vivian {
-      color: #e8dfff;
+      color: #4a3f3a;
       margin-bottom: 8px;
     }
 
     #newChatBtn {
       position: absolute;
-      top: -4px;
-      right: -4px;
-      background: #4a3a5a;
-      color: #e8dfff;
-      font-family: Georgia, serif;
+      top: -6px;
+      right: -6px;
+      background: #ff9d76;
+      color: #ffffff;
+      font-family: -apple-system, "Segoe UI", sans-serif;
       font-size: 10px;
-      border-radius: 4px;
-      padding: 2px 5px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      padding: 3px 7px;
       cursor: pointer;
       -webkit-app-region: no-drag;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
     }
     #newChatBtn:hover {
-      background: #5c4a70;
+      background: #ff8a5c;
     }
 
     #inputBox {
@@ -101,7 +116,7 @@
       bottom: 8px;
       left: 50%;
       transform: translateX(-50%);
-      width: 180px;
+      width: 185px;
       -webkit-app-region: no-drag;
       display: none;
     }
@@ -110,18 +125,19 @@
     }
     #chatInput {
       flex: 1;
-      background: #1a1420; /* solid, not translucent — keeps text high-contrast */
-      color: #ffffff;
-      caret-color: #ffffff;
-      border: 1px solid #7a5a9a;
-      border-radius: 4px;
-      padding: 7px 9px;
-      font-family: Georgia, serif;
-      font-size: 14px;
+      background: #ffffff;
+      color: #4a3f3a;
+      caret-color: #ff9d76;
+      border: 2px solid #ff9d76;
+      border-radius: 14px;
+      padding: 7px 11px;
+      font-family: -apple-system, "Segoe UI", sans-serif;
+      font-size: 13px;
       outline: none;
+      box-shadow: 0 2px 6px rgba(255, 157, 118, 0.2);
     }
     #chatInput::placeholder {
-      color: #a898c0;
+      color: #d9b8a8;
     }
   </style>
 </head>

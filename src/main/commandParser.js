@@ -34,7 +34,11 @@ const TIME_UNIT_MS = {
  * handled, or null to fall through to opening it as an app.
  */
 async function tryHandleWebOrFolderOpen(appName) {
-  const lower = appName.toLowerCase().replace(/\s*(for me|please|for me please)$/i, "").trim();
+  const lower = appName
+    .toLowerCase()
+    .replace(/\s*(for me|please|for me please)$/i, "")
+    .replace(/\s*(in|on) firefox$/i, "")
+    .trim();
 
   // "open the wikipedia page about OCTOPUSES" / "open wikipedia page on X"
   const wikiArticleMatch = lower.match(/^(?:the )?wikipedia page (?:about|on|for) (.+)/i);
@@ -52,7 +56,7 @@ async function tryHandleWebOrFolderOpen(appName) {
   if (webTools.KNOWN_SITES[lower]) {
     try {
       await webTools.openKnownSite(lower);
-      return `O-okay, opening ${appName}...!`;
+      return `O-okay, opening ${lower}...!`;
     } catch (err) {
       return `Um, ${err.message}`;
     }
@@ -88,8 +92,9 @@ function stripFiller(message) {
 async function tryHandleCommand(rawMessage) {
   const message = stripFiller(rawMessage);
 
-  // "open X" — launches an app by name
-  const openMatch = message.match(/^open (?:the )?(.+?)(?:\.app)?$/i);
+  // "open X" — launches an app by name (matches anywhere in the sentence,
+  // e.g. "hey uh, can you open Firefox for me" still works now)
+  const openMatch = message.match(/\bopen (?:up )?(?:the )?(.+?)(?:\.app)?[?!.]*$/i);
   if (openMatch) {
     const [, rawAppName] = openMatch;
     const appName = rawAppName.replace(/[?!.,]+$/, "").trim();
@@ -108,7 +113,7 @@ async function tryHandleCommand(rawMessage) {
   }
 
   // "quit X" / "close X" — closes an app entirely
-  const quitMatch = message.match(/^(?:quit|close) (?:the )?(.+?)(?:\.app)?$/i);
+  const quitMatch = message.match(/\b(?:quit|close) (?:the )?(.+?)(?:\.app)?[?!.]*$/i);
   if (quitMatch) {
     const [, rawAppName] = quitMatch;
     const appName = rawAppName.replace(/[?!.,]+$/, "").trim();
@@ -147,7 +152,7 @@ async function tryHandleCommand(rawMessage) {
   }
 
   // "show the dock" / "hide the dock"
-  const dockMatch = message.match(/^(show|hide) (?:the )?dock$/i);
+  const dockMatch = message.match(/\b(show|hide) (?:the )?dock\b/i);
   if (dockMatch) {
     const wantVisible = dockMatch[1].toLowerCase() === "show";
     try {
@@ -171,7 +176,7 @@ async function tryHandleCommand(rawMessage) {
   }
 
   // "google X" / "search for X"
-  const googleMatch = message.match(/^(?:google|search for) (.+)/i);
+  const googleMatch = message.match(/\b(?:google|search for) (.+?)[?!.]*$/i);
   if (googleMatch) {
     const [, query] = googleMatch;
     try {

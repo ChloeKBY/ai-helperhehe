@@ -6,27 +6,32 @@ nothing to run.
 
 ## Editing what Evie knows about you
 
-There are now TWO memory files, both feeding into her prompt:
+**Just fill in ONE file: `src/memory/personalFacts.json`.** This is the
+simple fill-in-the-blank profile — name, location, timezone, goals,
+projects, aesthetic, interests, social. Delete fields you don't want, add
+lines to the arrays, or leave things blank. It's gitignored (not tracked
+by git) since it holds real personal details —
+`personalFacts.example.json` is the tracked template showing the schema
+if you ever need to see it fresh.
 
-1. **`src/memory/personalFacts.json`** — a structured profile (name,
-   location, goals, projects, aesthetic, interests, social). This file is
-   gitignored (not tracked by git) since it holds real personal details —
-   `personalFacts.example.json` is the tracked template showing the schema.
-   Edit the real `personalFacts.json` directly; it's already filled in
-   with what you gave me.
-2. **`src/memory/userMemory.json`** — the flat key/value list from before
-   (timezone, etc.) for anything that doesn't fit the structured profile.
+`src/memory/userMemory.json` still exists for one thing only:
+`ntfy_topic` (optional phone notifications — see below). Timezone now
+lives in `personalFacts.json` instead, so if you set it in the old
+`userMemory.json` file, move it over: add a `"timezone": "America/Moncton"`
+line inside `personalFacts.json`'s `memory` object.
 
-Both get merged into her system prompt automatically — no restart needed,
-they're read fresh on every message.
+Everything gets merged into her system prompt automatically — no restart
+needed, read fresh on every message.
 
-## Chat history (now persistent)
+## Chat history (now separate sessions)
 
-Conversation history now survives app restarts — it's saved to
-`src/memory/chatHistory.json` (gitignored, since it's your private
-conversations) after every exchange. It loads automatically when the app
-starts, so clicking her shows your full past conversation, not a blank
-slate. Hit **"New"** to permanently clear it and start fresh.
+Each conversation is now its own file under `src/memory/chatSessions/`
+(gitignored — private conversations). Hitting **"New"** starts a fresh
+session WITHOUT deleting the old one — all past sessions stay saved on
+disk permanently. There's no in-app session browser yet (just the current
+one loads when you open the app) — if you want a way to actually browse
+and reopen old sessions from within the UI, let me know and I'll add a
+picker.
 
 ## File management & reminders
 
@@ -134,30 +139,49 @@ error, upset during a productivity intervention, idle otherwise.
 - ⬜ Vision model not yet pulled — run `ollama pull moondream` before
   screen-watching will work (see Requirements below)
 
-## Screen-watching setup
+## Screen-watching setup & troubleshooting
 
 ```bash
 ollama pull moondream
 ```
 
-Then in **System Settings > Privacy & Security > Screen Recording**, grant
-permission to your terminal/Electron app the first time it runs — macOS
-will prompt automatically.
+**This step is required** — if you skip it, EVERY screen check silently
+fails. As of this fix, 3 failures in a row now triggers an actual macOS
+notification telling you something's wrong, instead of failing forever
+with no visible sign anything's broken (that was the bug causing "screen
+watching isn't working at all").
 
-**Current rule** (edit constants at the top of `src/main/main.js`):
-- Watches: the browser app (`WATCHED_APP`, default "Firefox") — but only
-  triggers when specific SITE keywords appear in the window's title
-  (`WATCHED_TITLE_KEYWORDS`, default `["character.ai", "c.ai"]`), not just
-  for having the browser open. Studying on Firefox with a different tab
-  title won't trigger anything.
-- Works with private/incognito windows — the page title still shows in
-  the title bar regardless of browsing mode.
-- Threshold: 1 hour with a watched keyword in the title before a check-in
-  (`FOCUS_THRESHOLD_MS`)
-- If the vision model says "distracted": closes Firefox and blocks it
-  from reopening for 2 hours (`BLOCK_DURATION_MS`)
-- Add more sites by adding keywords to `WATCHED_TITLE_KEYWORDS` — matching
-  is case-insensitive and checks if the keyword appears anywhere in the
+Also grant **Screen Recording** permission in System Settings > Privacy &
+Security the first time it runs.
+
+**How it currently works** (`src/main/screenWatcher.js`):
+- Every 8 seconds, takes a screenshot and asks Moondream a yes/no question
+  (`TARGET_SITE_QUESTION` at the top of the file — currently asking about
+  character.ai)
+- If "yes" for 30+ seconds straight, triggers the intervention: mouse
+  drags to the corner, and `TARGET_BROWSER` (default `"Firefox"`) gets
+  closed + blocked from reopening for a while
+
+**On switching to Orion:** the vision-model detection itself works exactly
+the same regardless of browser — it's just looking at pixels on your
+screen, not reading browser-specific data, so Orion vs Firefox makes zero
+difference to whether it CATCHES you. What you'd need to change is
+`TARGET_BROWSER` in `screenWatcher.js` (and the same app name in
+`firefoxBlocker.js`, which right now is hardcoded to Firefox specifically)
+so the close/block action actually targets Orion instead.
+
+**On your Screen Time / private-window concern:** these are two separate
+systems worth not conflating. Our own detection (above) doesn't touch
+macOS Screen Time at all — it's independent, screenshot-based. As for
+Apple's own Screen Time app itself: I'm not fully certain how it handles
+private windows in WebKit-based browsers like Orion — this is the kind of
+platform-specific detail that can change between macOS versions and isn't
+something I want to state with false confidence. If it matters to you,
+worth testing directly (browse privately in Orion, then check Screen
+Time's per-site breakdown afterward) rather than relying on my guess.
+
+## Old screen-watching notes (superseded by the above)
+
   title, so partial matches work (e.g. "c.ai" catches most c.ai tab titles)
 
 ## Notes on design decisions

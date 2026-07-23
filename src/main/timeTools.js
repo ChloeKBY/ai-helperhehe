@@ -8,8 +8,12 @@
 
 const memoryManager = require("../memory/memoryManager");
 
-/** Pulls the "timezone" fact out of userMemory.json, if set. */
+/** Pulls the timezone from personalFacts.json first, or userMemory.json as a fallback. */
 function getUserTimezone() {
+  const personal = memoryManager.loadPersonalFacts();
+  const nestedTz = personal && personal.memory && personal.memory.timezone;
+  if (nestedTz && !nestedTz.startsWith("e.g.")) return nestedTz.trim();
+
   const memory = memoryManager.load();
   const fact = memory.facts.find((f) => f.key === "timezone");
   if (!fact || !fact.value || fact.value.startsWith("PUT ")) return null;
