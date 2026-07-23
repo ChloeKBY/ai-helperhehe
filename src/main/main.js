@@ -18,6 +18,7 @@ const fs = require("fs");
 const ollamaClient = require("../ollama/ollamaClient");
 const memoryManager = require("../memory/memoryManager");
 const { startCAIMonitoring } = require("./screenWatcher");
+const { tryHandleCommand } = require("./commandParser");
 
 let mainWindow;
 
@@ -61,6 +62,15 @@ app.on("window-all-closed", () => {
 // Chat: renderer sends a user message, main streams tokens back
 ipcMain.handle("chat:send", async (event, userMessage) => {
   try {
+    // Check for a recognized command (reminder, file move, organize) first —
+    // if it matches, act on it directly instead of asking the LLM to "chat"
+    // about doing something without actually doing it.
+    const commandReply = tryHandleCommand(userMessage);
+    if (commandReply !== null) {
+      event.sender.send("chat:token", commandReply);
+      return { fullResponse: commandReply };
+    }
+
     const running = await ollamaClient.isOllamaRunning();
     if (!running) {
       return { error: "Ollama isn't running. Start it with `ollama serve` and try again." };

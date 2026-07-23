@@ -85,12 +85,10 @@ chatInput.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeInput();
 });
 
-/** Clicking anywhere outside the character/bubble/input closes the popup. */
-document.addEventListener("pointerdown", (e) => {
-  if (!wrapper.contains(e.target)) {
-    closeInput();
-    speechBubble.classList.remove("visible");
-  }
+/** When the window loses focus (you clicked elsewhere on your Mac), close the popup. */
+window.addEventListener("blur", () => {
+  closeInput();
+  speechBubble.classList.remove("visible");
 });
 
 function closeInput() {

@@ -24,6 +24,27 @@ and save — every fact in there gets injected into her system prompt on every
 message, so she'll know it on the next thing you ask her. No restart needed
 for JSON edits, since it's read fresh each time you send a message.
 
+## File management & reminders (new)
+
+You can just type these directly into the chat and she'll actually do them
+(not just talk about doing them):
+
+- **"remind me to drink water in 10 minutes"** → sets a one-off timer, shows
+  a native macOS notification when it fires
+- **"remind me to stretch every 30 minutes"** → repeating reminder, fires
+  forever until you restart the app
+- **"move screenshot.png to Desktop"** → moves a file (paths are relative to
+  your home folder unless you give a full path)
+- **"organize Downloads"** / **"clean up Downloads"** → sorts files in that
+  folder into subfolders (Images, Documents, Archives, Audio, Video) by
+  file extension
+
+This works via simple pattern-matching in `src/main/commandParser.js` —
+it checks your message against a few regexes BEFORE sending anything to
+the LLM. If nothing matches, your message goes to Vivian normally. This is
+intentionally simple (not full NLU) — if a phrasing doesn't match, rephrase
+it closer to the examples above, or ask me to expand the patterns.
+
 ## Requirements
 
 - macOS
