@@ -149,20 +149,33 @@ Also grant **Screen Recording** permission in System Settings > Privacy &
 Security the first time it runs.
 
 **How it currently works** (`src/main/screenWatcher.js`):
-- Every 8 seconds, takes a screenshot and asks Moondream a yes/no question
-  (`TARGET_SITE_QUESTION` at the top of the file — currently asking about
-  character.ai)
-- If "yes" for 30+ seconds straight, triggers the intervention: mouse
-  drags to the corner, and `TARGET_BROWSER` (default `"Firefox"`) gets
-  closed + blocked from reopening for a while
+- A cheap, near-instant check first asks "is `TARGET_BROWSER` (default
+  Firefox) even the focused app right now?" — only if yes does it bother
+  with the expensive vision call. This was added after the vision-only
+  version was found to run continuously regardless of what app was open,
+  causing real, noticeable laptop heat from nonstop model inference.
+- If Firefox IS focused: every 15 seconds, takes a screenshot and asks
+  the model a yes/no question (`TARGET_SITE_QUESTION` at the top of the
+  file, currently checking for character.ai's actual UI — the small "c.ai"
+  badge, chat bubbles, disclaimer text — not literal domain text, since
+  that isn't always visible in private windows)
+- If "yes" for 30+ seconds straight: mouse drags to the corner, the
+  current tab/window closes (Firefox itself stays open and usable for
+  everything else), and `BLOCK_DOMAIN` (default `character.ai`) gets
+  redirected to nowhere via `/etc/hosts` for `BLOCK_DURATION_MS` (default
+  2 hours) — the domain simply won't load during that window, but nothing
+  else about Firefox or your Mac is restricted.
+- Blocking a domain requires admin rights, so the FIRST time this
+  triggers, macOS will show a native password prompt (via AppleScript's
+  "administrator privileges") — that's expected, not a bug.
 
 **On switching to Orion:** the vision-model detection itself works exactly
 the same regardless of browser — it's just looking at pixels on your
 screen, not reading browser-specific data, so Orion vs Firefox makes zero
 difference to whether it CATCHES you. What you'd need to change is
-`TARGET_BROWSER` in `screenWatcher.js` (and the same app name in
-`firefoxBlocker.js`, which right now is hardcoded to Firefox specifically)
-so the close/block action actually targets Orion instead.
+`TARGET_BROWSER` in `screenWatcher.js` so the focus-gate and window-close
+step target Orion instead (the domain-blocking step is browser-agnostic
+already, since `/etc/hosts` applies system-wide).
 
 **On your Screen Time / private-window concern:** these are two separate
 systems worth not conflating. Our own detection (above) doesn't touch

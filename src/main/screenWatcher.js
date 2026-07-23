@@ -17,7 +17,8 @@
 
 const { desktopCapturer, screen } = require("electron");
 const moondream = require("../moondream/moondream");
-const { blockFirefox } = require("./firefoxBlocker");
+const { blockDomain } = require("./siteBlocker");
+const { closeFrontmostWindow } = require("./windowManager");
 const { dragMouseToCorner } = require("./mouseControl");
 const { showNotification } = require("./reminders");
 const { getFocusedWindow } = require("./focusWatcher");
@@ -29,6 +30,8 @@ const TARGET_SITE_QUESTION =
 // If you switch browsers (e.g. to Orion instead of Firefox), update this —
 // it's the app name used for the close/block intervention.
 const TARGET_BROWSER = "Firefox";
+const BLOCK_DOMAIN = "character.ai";
+const BLOCK_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 let caiDetectedAt = null;
 let interventionInProgress = false;
@@ -74,7 +77,9 @@ async function performCAIIntervention() {
 
   try {
     await dragMouseToCorner("bottom-right");
-    blockFirefox(); // NOTE: targets Firefox specifically — see TARGET_BROWSER above
+    await closeFrontmostWindow(); // closes just the c.ai tab/window (Cmd+W) — Firefox itself stays open and usable
+    await blockDomain(BLOCK_DOMAIN, BLOCK_DURATION_MS); // character.ai specifically won't resolve for 2 hours; every other site works fine
+    showNotification("Evie", `C-closed it... character.ai is blocked for the next 2 hours!`);
   } catch (err) {
     console.error("Intervention failed:", err);
   } finally {
