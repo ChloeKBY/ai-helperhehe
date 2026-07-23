@@ -30,14 +30,17 @@ let lastX = 0;
 let lastY = 0;
 const DRAG_THRESHOLD = 4; // pixels of movement before it counts as a drag, not a click
 
-sprite.addEventListener("mousedown", (e) => {
+sprite.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  sprite.setPointerCapture(e.pointerId);
+
   isDragging = false;
   dragStartX = e.screenX;
   dragStartY = e.screenY;
   lastX = e.screenX;
   lastY = e.screenY;
 
-  const onMouseMove = (moveEvent) => {
+  const onPointerMove = (moveEvent) => {
     const totalDx = moveEvent.screenX - dragStartX;
     const totalDy = moveEvent.screenY - dragStartY;
     if (Math.abs(totalDx) > DRAG_THRESHOLD || Math.abs(totalDy) > DRAG_THRESHOLD) {
@@ -53,9 +56,11 @@ sprite.addEventListener("mousedown", (e) => {
     }
   };
 
-  const onMouseUp = () => {
-    document.removeEventListener("mousemove", onMouseMove);
-    document.removeEventListener("mouseup", onMouseUp);
+  const onPointerUp = (upEvent) => {
+    sprite.releasePointerCapture(upEvent.pointerId);
+    sprite.removeEventListener("pointermove", onPointerMove);
+    sprite.removeEventListener("pointerup", onPointerUp);
+    sprite.removeEventListener("pointercancel", onPointerUp);
 
     if (!isDragging) {
       // It was a click, not a drag — open the input box
@@ -65,8 +70,9 @@ sprite.addEventListener("mousedown", (e) => {
     }
   };
 
-  document.addEventListener("mousemove", onMouseMove);
-  document.addEventListener("mouseup", onMouseUp);
+  sprite.addEventListener("pointermove", onPointerMove);
+  sprite.addEventListener("pointerup", onPointerUp);
+  sprite.addEventListener("pointercancel", onPointerUp);
 });
 
 chatInput.addEventListener("keydown", (e) => {

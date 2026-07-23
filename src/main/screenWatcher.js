@@ -1,6 +1,10 @@
-const { desktopCapturer, screen } = require("electron");
+const { desktopCapturer, screen, BrowserWindow } = require("electron");
 const moondream = require("../moondream/moondream");
 const { blockFirefox } = require("./firefoxBlocker");
+const { dragMouseToCorner } = require("./mouseControl");
+
+let caiDetectedAt = null;
+let interventionInProgress = false;
 
 async function captureScreenBuffer() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -35,13 +39,43 @@ async function analyzeScreenForCAI() {
   }
 }
 
+async function performCAIIntervention() {
+  if (interventionInProgress) return;
+  interventionInProgress = true;
+
+  try {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (win) {
+      win.close();
+    }
+
+    await dragMouseToCorner("bottom-right");
+    blockFirefox();
+  } catch (err) {
+    console.error("CAI intervention failed:", err);
+  } finally {
+    setTimeout(() => {
+      interventionInProgress = false;
+      caiDetectedAt = null;
+    }, 10000);
+  }
+}
+
 function startCAIMonitoring() {
   setInterval(async () => {
     try {
       const isOnCAI = await analyzeScreenForCAI();
       if (isOnCAI) {
-        console.log("Detected character.ai — blocking Firefox...");
-        blockFirefox();
+        if (!caiDetectedAt) {
+          caiDetectedAt = Date.now();
+        }
+
+        const elapsed = Date.now() - caiDetectedAt;
+        if (elapsed >= 30000) {
+          await performCAIIntervention();
+        }
+      } else {
+        caiDetectedAt = null;
       }
     } catch (err) {
       console.warn("CAI monitoring loop error:", err);

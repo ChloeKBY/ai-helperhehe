@@ -96,10 +96,18 @@ ipcMain.handle("memory:update", async (event, { key, value }) => {
 });
 
 // Manual window dragging: renderer sends mouse deltas while dragging
-ipcMain.on("window:moveBy", (event, { dx, dy }) => {
+ipcMain.on("window:moveBy", (event, dx, dy) => {
   if (!mainWindow) return;
+
+  const numericDx = Number(dx);
+  const numericDy = Number(dy);
+  if (!Number.isFinite(numericDx) || !Number.isFinite(numericDy)) {
+    console.warn("window:moveBy ignored invalid args:", { dx, dy });
+    return;
+  }
+
   const [x, y] = mainWindow.getPosition();
-  mainWindow.setPosition(x + dx, y + dy);
+  mainWindow.setPosition(x + numericDx, y + numericDy);
 });
 
 module.exports = { mainWindow };
