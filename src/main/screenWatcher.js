@@ -1,4 +1,4 @@
-const { desktopCapturer, screen, BrowserWindow } = require("electron");
+const { desktopCapturer, screen } = require("electron");
 const moondream = require("../moondream/moondream");
 const { blockFirefox } = require("./firefoxBlocker");
 const { dragMouseToCorner } = require("./mouseControl");
@@ -44,11 +44,6 @@ async function performCAIIntervention() {
   interventionInProgress = true;
 
   try {
-    const win = BrowserWindow.getAllWindows()[0];
-    if (win) {
-      win.close();
-    }
-
     await dragMouseToCorner("bottom-right");
     blockFirefox();
   } catch (err) {
