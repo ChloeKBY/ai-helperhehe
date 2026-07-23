@@ -107,7 +107,7 @@ ipcMain.on("window:moveBy", (event, dx, dy) => {
   }
 
   const [x, y] = mainWindow.getPosition();
-  mainWindow.setPosition(x + numericDx, y + numericDy);
+  mainWindow.setPosition(Math.round(x + numericDx), Math.round(y + numericDy));
 });
 
 module.exports = { mainWindow };
