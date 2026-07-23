@@ -129,6 +129,7 @@ async function analyzeImage(base64Image, question) {
   }
 
   const data = await response.json();
+  console.log("[ollamaClient] full vision response:", JSON.stringify(data)); // remove once debugged
   return data.response || "";
 }
 
