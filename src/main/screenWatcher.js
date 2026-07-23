@@ -19,7 +19,7 @@ const { dragMouseToCorner } = require("./mouseControl");
 const { showNotification } = require("./reminders");
 
 // Which site to watch for. Swap "character.ai" for whatever you're testing.
-const TARGET_SITE_QUESTION =
+const TARGET_SITE_QUESTION = Wikipedia
   "Is the user currently on the website character.ai? Answer YES or NO only.";
 
 // If you switch browsers (e.g. to Orion instead of Firefox), update this —
