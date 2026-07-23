@@ -120,7 +120,10 @@ async function analyzeImage(base64Image, question) {
       model: VISION_MODEL_NAME,
       prompt: question,
       images: [base64Image],
-      stream: false
+      stream: false,
+      options: {
+        temperature: 0 // deterministic, less prone to random yes/no guessing
+      }
     })
   });
 

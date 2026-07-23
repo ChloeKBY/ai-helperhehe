@@ -20,7 +20,7 @@ const { showNotification } = require("./reminders");
 
 // Which site to watch for. Swap "character.ai" for whatever you're testing.
 const TARGET_SITE_QUESTION =
-  "Is the user currently on the website character.ai? Answer YES or NO only.";
+  "Look carefully at this screenshot. Do NOT guess. Only answer YES if you can clearly see a browser window with visible text reading 'character.ai', or a chat interface with message bubbles that clearly resembles Character.AI. If you do not see clear, specific evidence of this, answer NO. If uncertain, answer NO. Answer with exactly one word: YES or NO.";
 
 // If you switch browsers (e.g. to Orion instead of Firefox), update this —
 // it's the app name used for the close/block intervention.
@@ -35,11 +35,11 @@ async function captureScreenBuffer() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.size;
 
-  // Cap the captured size — sending a full-resolution Retina screenshot
-  // (which can be several MB as base64) to a small vision model like
-  // Moondream can silently fail/return empty instead of erroring. Scale
-  // down to a max width of 800px, keeping aspect ratio.
-  const maxWidth = 800;
+  // Cap the captured size — full Retina resolution is unnecessarily huge,
+  // but too small makes browser tab text illegible, which likely
+  // contributes to the model's yes-bias guessing. 1200px is a middle
+  // ground: still much smaller than native res, but text should be legible.
+  const maxWidth = 1200;
   const scale = Math.min(1, maxWidth / width);
   const scaledWidth = Math.round(width * scale);
   const scaledHeight = Math.round(height * scale);
