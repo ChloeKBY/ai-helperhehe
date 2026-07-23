@@ -1,15 +1,18 @@
 /**
  * screenWatcher.js
  *
- * Periodically screenshots the screen and asks a local vision model
- * (Moondream via Ollama) whether the target site/app is currently open.
+ * Periodically screenshots the screen and asks the local vision model
+ * (Gemma 3 4B via Ollama) whether the target site/app is currently open —
+ * but ONLY when the target browser is actually focused (a cheap check
+ * gates the expensive vision call, to avoid constant heavy inference
+ * eating CPU/battery/heat when it isn't even relevant).
  * If it's been open past the threshold, triggers an intervention
  * (mouse drag + closing/blocking the browser).
  *
- * IMPORTANT: this requires `ollama pull moondream` to have been run once.
+ * IMPORTANT: this requires `ollama pull gemma3:4b` to have been run once.
  * If that model isn't pulled, EVERY check fails silently unless you're
- * watching the terminal — this version now surfaces repeated failures as
- * an actual macOS notification so it's not a silent, invisible bug.
+ * watching the terminal — this version surfaces repeated failures as an
+ * actual macOS notification so it's not a silent, invisible bug.
  */
 
 const { desktopCapturer, screen } = require("electron");
@@ -17,10 +20,11 @@ const moondream = require("../moondream/moondream");
 const { blockFirefox } = require("./firefoxBlocker");
 const { dragMouseToCorner } = require("./mouseControl");
 const { showNotification } = require("./reminders");
+const { getFocusedWindow } = require("./focusWatcher");
 
 // Which site to watch for. Swap "character.ai" for whatever you're testing.
 const TARGET_SITE_QUESTION =
-  "Look carefully at this screenshot. Do NOT guess. Only answer YES if you can clearly see a browser window with visible text reading 'character.ai', or a chat interface with message bubbles that clearly resembles Character.AI. If you do not see clear, specific evidence of this, answer NO. If uncertain, answer NO. Answer with exactly one word: YES or NO.";
+  "Look carefully at this screenshot for a Character.AI chat interface. Answer YES if you see ANY of these: a small 'c.ai' tag/badge next to a character's name, a chat conversation with character avatars and message bubbles, a message input box with placeholder text like 'Message [name]...', or small disclaimer text saying something like 'This is A.I. and not a real person'. If you see a normal web page, code editor, terminal, or desktop with none of those signs, answer NO. Answer with exactly one word: YES or NO.";
 
 // If you switch browsers (e.g. to Orion instead of Firefox), update this —
 // it's the app name used for the close/block intervention.
@@ -84,6 +88,19 @@ async function performCAIIntervention() {
 function startCAIMonitoring() {
   setInterval(async () => {
     try {
+      // CHEAP gate first: only bother with the expensive vision call at all
+      // if the target browser is actually the focused app right now. This
+      // AppleScript check is near-instant — nowhere near the CPU/GPU cost
+      // of a full vision model inference. Running that every few seconds
+      // regardless of what's focused was almost certainly the cause of the
+      // laptop heat, since Gemma 3 4B does real inference work every single
+      // cycle, forever, even when Firefox wasn't even open.
+      const { appName } = await getFocusedWindow();
+      if (appName !== TARGET_BROWSER) {
+        caiDetectedAt = null; // not even in the browser — nothing to track
+        return;
+      }
+
       const isOnTarget = await analyzeScreenForCAI();
       consecutiveFailures = 0; // a successful check (true OR false) resets the failure count
 
@@ -109,11 +126,11 @@ function startCAIMonitoring() {
         hasWarnedAboutFailures = true;
         showNotification(
           "Evie",
-          "Screen watching keeps failing — check that `ollama pull moondream` has been run, and that Screen Recording permission is granted."
+          "Screen watching keeps failing — check that `ollama pull gemma3:4b` has been run, and that Screen Recording permission is granted."
         );
       }
     }
-  }, 8000);
+  }, 15000); // slower base rate too — the vision call is heavy, no need to hammer it
 }
 
 module.exports = { startCAIMonitoring };
