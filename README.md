@@ -82,14 +82,14 @@ about them:
 - macOS
 - Node.js + npm
 - [Ollama](https://ollama.com) installed
-- A pulled model: `ollama pull phi3:mini` (or `gemma2:2b` for something even lighter)
+- A pulled model: `ollama pull gemma3:4b` — this ONE model now handles both chat and screen-watching vision, no separate vision model needed
 - `cliclick` for the mouse-drag intervention: `brew install cliclick`
 
 ## Setup
 
 ```bash
 npm install
-ollama pull phi3:mini
+ollama pull gemma3:4b
 npm start
 ```
 
@@ -136,20 +136,14 @@ error, upset during a productivity intervention, idle otherwise.
 - ⬜ Photo-verification chore-checking flow (e.g. "has laundry been folded")
   — deferred in favor of screen-watching, may revisit later
 - ⬜ Notion integration (tasks + calendar sync)
-- ⬜ Vision model not yet pulled — run `ollama pull moondream` before
-  screen-watching will work (see Requirements below)
+- ✅ Chat and screen-watching now share one model (`gemma3:4b`) instead of
+  two separate ones — simpler, less RAM juggling
 
 ## Screen-watching setup & troubleshooting
 
-```bash
-ollama pull moondream
-```
+Uses the same `gemma3:4b` model as chat now — no separate pull needed if
+you've already done the setup step above.
 
-**This step is required** — if you skip it, EVERY screen check silently
-fails. As of this fix, 3 failures in a row now triggers an actual macOS
-notification telling you something's wrong, instead of failing forever
-with no visible sign anything's broken (that was the bug causing "screen
-watching isn't working at all").
 
 Also grant **Screen Recording** permission in System Settings > Privacy &
 Security the first time it runs.

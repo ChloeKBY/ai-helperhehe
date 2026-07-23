@@ -11,7 +11,7 @@
  */
 
 const OLLAMA_URL = "http://localhost:11434/api/generate";
-const MODEL_NAME = "phi3:mini"; // swap to "gemma2:2b" if you want it lighter still
+const MODEL_NAME = "gemma3:4b"; // handles both chat AND vision — one model for everything now
 
 /**
  * Sends a prompt to the local model and streams the response back
@@ -99,7 +99,7 @@ async function isOllamaRunning() {
   }
 }
 
-const VISION_MODEL_NAME = "moondream"; // lightweight vision model, ~1.8GB
+const VISION_MODEL_NAME = "gemma3:4b"; // same model as chat now — no separate vision model needed
 
 /**
  * Sends a base64-encoded screenshot to a local vision model for a judgment
