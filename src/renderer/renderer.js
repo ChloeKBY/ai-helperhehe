@@ -3,20 +3,25 @@
  *
  * Click-to-chat interaction: click the character to reveal an input box,
  * type a question and press Enter, and her reply streams into a speech
- * bubble above her head. The bubble auto-hides after a few seconds of
- * inactivity so the window stays small and out of the way otherwise.
+ * bubble above her head. The bubble now STAYS until you click away from
+ * her (no more auto-hide timer making it vanish before you can read it).
+ *
+ * Keeps a running conversation history so you can scroll back through it
+ * within the bubble, with a "new chat" option to clear it.
  *
  * Runs in the sandboxed renderer process — only talks to the outside
  * world via window.vivian (exposed by preload.js).
  */
 
+const wrapper = document.getElementById("wrapper");
 const sprite = document.getElementById("sprite");
 const speechBubble = document.getElementById("speechBubble");
 const inputBox = document.getElementById("inputBox");
 const chatInput = document.getElementById("chatInput");
+const newChatBtn = document.getElementById("newChatBtn");
 
-let currentResponse = "";
-let hideBubbleTimeout = null;
+let conversation = []; // { role: "user" | "vivian", text: string }[]
+let streamingIndex = -1; // index in `conversation` currently being streamed into
 
 /**
  * Distinguishes a click (open the input box) from a drag (move the
@@ -64,8 +69,8 @@ sprite.addEventListener("pointerdown", (e) => {
 
     if (!isDragging) {
       // It was a click, not a drag — open the input box
-      speechBubble.classList.remove("visible");
       inputBox.classList.add("visible");
+      speechBubble.classList.add("visible"); // show history alongside the input
       chatInput.focus();
     }
   };
@@ -77,7 +82,25 @@ sprite.addEventListener("pointerdown", (e) => {
 
 chatInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") handleSend();
-  if (e.key === "Escape") inputBox.classList.remove("visible");
+  if (e.key === "Escape") closeInput();
+});
+
+/** Clicking anywhere outside the character/bubble/input closes the popup. */
+document.addEventListener("pointerdown", (e) => {
+  if (!wrapper.contains(e.target)) {
+    closeInput();
+    speechBubble.classList.remove("visible");
+  }
+});
+
+function closeInput() {
+  inputBox.classList.remove("visible");
+}
+
+newChatBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  conversation = [];
+  renderConversation();
 });
 
 async function handleSend() {
@@ -85,54 +108,59 @@ async function handleSend() {
   if (!message) return;
 
   chatInput.value = "";
-  inputBox.classList.remove("visible");
 
-  currentResponse = "";
+  conversation.push({ role: "user", text: message });
+  conversation.push({ role: "vivian", text: "" });
+  streamingIndex = conversation.length - 1;
+
   speechBubble.classList.add("visible");
-  speechBubble.textContent = "...";
+  renderConversation();
   setSprite("confused"); // "thinking" face while waiting on a response
-
-  clearTimeout(hideBubbleTimeout);
 
   try {
     const result = await window.vivian.sendMessage(message);
 
     if (result.error) {
-      speechBubble.textContent = `(${result.error})`;
+      conversation[streamingIndex].text = `(${result.error})`;
       setSprite("uncomfortable");
     } else {
       setSprite("happy");
     }
   } catch (err) {
-    speechBubble.textContent = `(Something broke: ${err.message})`;
+    conversation[streamingIndex].text = `(Something broke: ${err.message})`;
     setSprite("uncomfortable");
   }
 
-  scheduleHideBubble();
+  renderConversation();
 }
 
-// Streamed tokens update the bubble live as they arrive
+// Streamed tokens update the in-progress message live as they arrive
 window.vivian.onToken((token) => {
-  currentResponse += token;
-  speechBubble.textContent = currentResponse;
+  if (streamingIndex === -1) return;
+  conversation[streamingIndex].text += token;
+  renderConversation();
 });
 
-// Productivity interventions also show up in the speech bubble
+// Productivity interventions also show up as a message in the history
 window.vivian.onIntervention((message) => {
-  currentResponse = message;
+  conversation.push({ role: "vivian", text: message });
   speechBubble.classList.add("visible");
-  speechBubble.textContent = currentResponse;
+  renderConversation();
   setSprite("upset");
-  scheduleHideBubble();
 });
 
-/** Hides the speech bubble a few seconds after the reply finishes. */
-function scheduleHideBubble() {
-  clearTimeout(hideBubbleTimeout);
-  hideBubbleTimeout = setTimeout(() => {
-    speechBubble.classList.remove("visible");
-    setSprite("idle"); // back to neutral once she's done talking
-  }, 8000);
+/** Redraws the whole conversation transcript inside the scrollable bubble. */
+function renderConversation() {
+  speechBubble.innerHTML = "";
+
+  for (const msg of conversation) {
+    const line = document.createElement("div");
+    line.className = msg.role === "user" ? "msg-user" : "msg-vivian";
+    line.textContent = msg.text || "...";
+    speechBubble.appendChild(line);
+  }
+
+  speechBubble.scrollTop = speechBubble.scrollHeight; // auto-scroll to latest
 }
 
 /**

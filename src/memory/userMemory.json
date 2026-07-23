@@ -1,5 +1,6 @@
 {
   "facts": [
+    { "key": "timezone", "value": "PUT YOUR TIMEZONE HERE, e.g. America/Moncton" },
     { "key": "example_fact", "value": "replace this with a real fact about yourself, e.g. workout schedule, ongoing projects, preferences" }
   ]
 }

@@ -4,6 +4,26 @@ A macOS Electron app: a transparent, always-on-top PNGtuber character that
 chats using a **local** LLM (via Ollama) instead of a paid API, so it costs
 nothing to run.
 
+## Editing what Vivian knows about you
+
+Everything she "knows" lives in one plain file:
+**`src/memory/userMemory.json`**
+
+It's just a list of key/value facts:
+```json
+{
+  "facts": [
+    { "key": "timezone", "value": "America/Moncton" },
+    { "key": "workout_routine", "value": "Bourne-style bodyweight circuit, 3x/week" }
+  ]
+}
+```
+
+To add or change something (like your timezone), just edit that file directly
+and save — every fact in there gets injected into her system prompt on every
+message, so she'll know it on the next thing you ask her. No restart needed
+for JSON edits, since it's read fresh each time you send a message.
+
 ## Requirements
 
 - macOS

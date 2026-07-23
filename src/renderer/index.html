@@ -23,7 +23,7 @@
        so the bubble/input never get clipped off the top of the window
        (a bug in an earlier version — they were positioned above y=0). */
     #stage {
-      flex: 0 0 90px;
+      flex: 0 0 150px;
       position: relative;
     }
 
@@ -37,17 +37,18 @@
 
     #speechBubble {
       position: absolute;
-      bottom: 8px;
+      bottom: 40px;
       left: 50%;
       transform: translateX(-50%);
-      min-width: 120px;
-      max-width: 190px;
+      width: 190px;
+      max-height: 100px;
+      overflow-y: auto;
       background: rgba(20, 15, 25, 0.92);
       color: #e8dfff;
       font-family: Georgia, serif;
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.4;
-      padding: 8px 10px;
+      padding: 6px 9px;
       border-radius: 8px;
       -webkit-app-region: no-drag;
       display: none;
@@ -63,6 +64,36 @@
       transform: translateX(-50%);
       border: 6px solid transparent;
       border-top-color: rgba(20, 15, 25, 0.92);
+    }
+
+    .msg-user {
+      color: #b8a8d8;
+      margin-bottom: 4px;
+    }
+    .msg-user::before {
+      content: "You: ";
+      font-weight: bold;
+    }
+    .msg-vivian {
+      color: #e8dfff;
+      margin-bottom: 8px;
+    }
+
+    #newChatBtn {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #4a3a5a;
+      color: #e8dfff;
+      font-family: Georgia, serif;
+      font-size: 10px;
+      border-radius: 4px;
+      padding: 2px 5px;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+    }
+    #newChatBtn:hover {
+      background: #5c4a70;
     }
 
     #inputBox {
@@ -100,6 +131,7 @@
       <div id="speechBubble"></div>
       <div id="inputBox">
         <input id="chatInput" type="text" placeholder="Ask Vivian..." autofocus />
+        <button id="newChatBtn" title="Start a new chat">New</button>
       </div>
     </div>
     <img id="sprite" src="../../assets/pngtuber/idle.png" alt="Vivian" />
