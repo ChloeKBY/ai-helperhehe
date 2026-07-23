@@ -11,7 +11,8 @@ const { screen } = require("electron");
 
 function run(script) {
   return new Promise((resolve, reject) => {
-    exec(`osascript -e '${script.replace(/\n/g, " ")}'`, (err, stdout) => {
+    const lines = script.trim().split("\n").map((l) => `-e '${l.trim()}'`).join(" ");
+    exec(`osascript ${lines}`, (err, stdout) => {
       if (err) return reject(err);
       resolve(stdout.trim());
     });

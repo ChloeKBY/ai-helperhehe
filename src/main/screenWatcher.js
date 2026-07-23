@@ -25,7 +25,7 @@ const { getFocusedWindow } = require("./focusWatcher");
 
 // Which site to watch for. Swap "character.ai" for whatever you're testing.
 const TARGET_SITE_QUESTION =
-  "Look carefully at this screenshot for a Character.AI chat interface. Answer YES if you see ANY of these: a small 'c.ai' tag/badge next to a character's name, a chat conversation with character avatars and message bubbles, a message input box with placeholder text like 'Message [name]...', or small disclaimer text saying something like 'This is A.I. and not a real person'. If you see a normal web page, code editor, terminal, or desktop with none of those signs, answer NO. Answer with exactly one word: YES or NO.";
+  "Look carefully at this screenshot. Answer YES ONLY if you see the EXACT text 'c.ai' as a small tag next to a chat message, AND a conversational chat interface with back-and-forth message bubbles between a user and an AI character. A grid of images (like Pinterest), a normal webpage, code, or terminal is NOT this and must be answered NO. When unsure, answer NO. Answer with exactly one word: YES or NO.";
 
 // If you switch browsers (e.g. to Orion instead of Firefox), update this —
 // it's the app name used for the close/block intervention.
