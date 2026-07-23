@@ -28,5 +28,9 @@ contextBridge.exposeInMainWorld("vivian", {
 
   // Manual window dragging (since the sprite needs to handle clicks too,
   // which -webkit-app-region: drag blocks)
-  moveWindowBy: (dx, dy) => ipcRenderer.send("window:moveBy", dx, dy)
+  moveWindowBy: (dx, dy) => ipcRenderer.send("window:moveBy", dx, dy),
+
+  // Persistent chat history — survives app restarts
+  getHistory: () => ipcRenderer.invoke("history:get"),
+  clearHistory: () => ipcRenderer.invoke("history:clear")
 });

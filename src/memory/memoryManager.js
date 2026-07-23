@@ -9,6 +9,7 @@ const fs = require("fs");
 const path = require("path");
 
 const MEMORY_PATH = path.join(__dirname, "userMemory.json");
+const PERSONAL_FACTS_PATH = path.join(__dirname, "personalFacts.json");
 
 /** Loads the memory file, creating a blank one if it doesn't exist yet. */
 function load() {
@@ -51,15 +52,67 @@ function merge(newFacts) {
   return memory;
 }
 
+/** Loads the structured personalFacts.json (nested profile format), if present. */
+function loadPersonalFacts() {
+  if (!fs.existsSync(PERSONAL_FACTS_PATH)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(PERSONAL_FACTS_PATH, "utf-8"));
+  } catch {
+    return null; // corrupted file — skip it rather than crashing
+  }
+}
+
+/** Flattens a nested value (string, array, or object) into readable text. */
+function formatValue(value) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "object" && value !== null) {
+    return Object.entries(value)
+      .map(([k, v]) => `${k}: ${formatValue(v)}`)
+      .join("; ");
+  }
+  return String(value);
+}
+
+/** Turns personalFacts.json's nested "memory" object into prompt-ready lines. */
+function formatPersonalFacts() {
+  const data = loadPersonalFacts();
+  if (!data || !data.memory) return "";
+
+  const lines = Object.entries(data.memory)
+    .filter(([, value]) => {
+      // skip empty arrays/objects/placeholder strings so blank fields
+      // don't clutter the prompt before the user fills them in
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === "object" && value !== null) return Object.keys(value).length > 0;
+      return value && !String(value).startsWith("PUT ");
+    })
+    .map(([key, value]) => `- ${key}: ${formatValue(value)}`);
+
+  if (!lines.length) return "";
+
+  const header = data.system || "User profile:";
+  return `${header}\n${lines.join("\n")}`;
+}
+
 /**
  * Formats stored facts as plain text to inject into the system prompt,
- * so the model has context about you in every conversation.
+ * so the model has context about you in every conversation. Combines
+ * both the flat userMemory.json facts and the structured
+ * personalFacts.json profile.
  */
 function formatForPrompt() {
   const memory = load();
-  if (!memory.facts.length) return "";
-  const lines = memory.facts.map((f) => `- ${f.key}: ${f.value}`);
-  return `Known context about the user:\n${lines.join("\n")}`;
+  const flatLines = memory.facts.length
+    ? memory.facts.map((f) => `- ${f.key}: ${f.value}`)
+    : [];
+
+  const personalSection = formatPersonalFacts();
+
+  const parts = [];
+  if (personalSection) parts.push(personalSection);
+  if (flatLines.length) parts.push(`Additional known context:\n${flatLines.join("\n")}`);
+
+  return parts.join("\n\n");
 }
 
-module.exports = { load, save, update, merge, formatForPrompt };
+module.exports = { load, save, update, merge, formatForPrompt, loadPersonalFacts };

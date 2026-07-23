@@ -19,6 +19,7 @@ const ollamaClient = require("../ollama/ollamaClient");
 const memoryManager = require("../memory/memoryManager");
 const { startCAIMonitoring } = require("./screenWatcher");
 const { tryHandleCommand } = require("./commandParser");
+const historyManager = require("./historyManager");
 
 let mainWindow;
 
@@ -62,12 +63,15 @@ app.on("window-all-closed", () => {
 // Chat: renderer sends a user message, main streams tokens back
 ipcMain.handle("chat:send", async (event, userMessage) => {
   try {
+    historyManager.appendMessage("user", userMessage);
+
     // Check for a recognized command (reminder, file move, organize) first —
     // if it matches, act on it directly instead of asking the LLM to "chat"
     // about doing something without actually doing it.
     const commandReply = tryHandleCommand(userMessage);
     if (commandReply !== null) {
       event.sender.send("chat:token", commandReply);
+      historyManager.appendMessage("vivian", commandReply);
       return { fullResponse: commandReply };
     }
 
@@ -89,11 +93,22 @@ ipcMain.handle("chat:send", async (event, userMessage) => {
       event.sender.send("chat:token", token);
     });
 
+    historyManager.appendMessage("vivian", fullResponse);
     return { fullResponse };
   } catch (err) {
     console.error("chat:send failed:", err);
     return { error: `Something went wrong: ${err.message}` };
   }
+});
+
+// History: renderer loads persisted history on startup, and can clear it
+ipcMain.handle("history:get", async () => {
+  return historyManager.load();
+});
+
+ipcMain.handle("history:clear", async () => {
+  historyManager.clear();
+  return { cleared: true };
 });
 
 // Memory: renderer can request current memory (read-only from that side)

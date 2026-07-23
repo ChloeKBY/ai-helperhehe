@@ -23,11 +23,20 @@ const TIME_UNIT_MS = {
   hours: 60 * 60 * 1000
 };
 
+/** Strips common polite/filler openers so the core pattern matches cleanly. */
+function stripFiller(message) {
+  return message
+    .replace(/^(can you|could you|would you|please|hey vivian,?|vivian,?)\s*/i, "")
+    .trim();
+}
+
 /**
  * Tries to parse and execute a command from the user's message.
  * @returns {string|null} a confirmation message if a command matched, else null
  */
-function tryHandleCommand(message) {
+function tryHandleCommand(rawMessage) {
+  const message = stripFiller(rawMessage);
+
   // "remind me to X in Y minutes/seconds/hours"
   const reminderMatch = message.match(
     /remind me to (.+?) in (\d+)\s*(second|seconds|minute|minutes|hour|hours)/i
@@ -54,15 +63,30 @@ function tryHandleCommand(message) {
     return `G-got it, I'll remind you to ${task.trim()} every ${amount} ${unit} from now on.`;
   }
 
-  // "move FILE to DESTINATION"
-  const moveMatch = message.match(/move (.+?) to (.+)/i);
-  if (moveMatch) {
-    const [, source, dest] = moveMatch;
-    try {
-      const result = fileManager.moveFile(source.trim(), dest.trim());
-      return `Moved it! ${result.from} -> ${result.to}`;
-    } catch (err) {
-      return `Um, I couldn't move that: ${err.message}`;
+  // File move — covers several natural phrasings:
+  //   "move X to Y"
+  //   "move X from Y to Z"          (source folder ignored — X is resolved as typed)
+  //   "put X on/in Y" / "put X on my Y"
+  //   "send X to Y"
+  //   "grab X from Y and put it on Z" / "...move it to Z"
+  const moveDestPatterns = [
+    /move (.+?) from .+? to (?:my |the )?(.+)/i,
+    /move (.+?) to (?:my |the )?(.+)/i,
+    /put (.+?) (?:on|in) (?:my |the )?(.+)/i,
+    /send (.+?) to (?:my |the )?(.+)/i,
+    /grab (.+?) from .+? and (?:put it (?:on|in)|move it to) (?:my |the )?(.+)/i
+  ];
+
+  for (const pattern of moveDestPatterns) {
+    const match = message.match(pattern);
+    if (match) {
+      const [, source, dest] = match;
+      try {
+        const result = fileManager.moveFile(source.trim(), dest.trim());
+        return `Moved it! ${result.from} -> ${result.to}`;
+      } catch (err) {
+        return `Um, I couldn't move that: ${err.message}`;
+      }
     }
   }
 

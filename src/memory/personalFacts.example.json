@@ -1,0 +1,12 @@
+{
+  "system": "You are Vivian's personal desktop companion. Here is her profile:",
+  "memory": {
+    "name": "PUT YOUR NAME HERE",
+    "location": "PUT YOUR CITY/PROVINCE HERE",
+    "fitness_goals": [],
+    "coding_projects": [],
+    "aesthetic": [],
+    "interests": [],
+    "social": {}
+  }
+}

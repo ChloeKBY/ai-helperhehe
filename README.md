@@ -6,44 +6,46 @@ nothing to run.
 
 ## Editing what Vivian knows about you
 
-Everything she "knows" lives in one plain file:
-**`src/memory/userMemory.json`**
+There are now TWO memory files, both feeding into her prompt:
 
-It's just a list of key/value facts:
-```json
-{
-  "facts": [
-    { "key": "timezone", "value": "America/Moncton" },
-    { "key": "workout_routine", "value": "Bourne-style bodyweight circuit, 3x/week" }
-  ]
-}
-```
+1. **`src/memory/personalFacts.json`** — a structured profile (name,
+   location, goals, projects, aesthetic, interests, social). This file is
+   gitignored (not tracked by git) since it holds real personal details —
+   `personalFacts.example.json` is the tracked template showing the schema.
+   Edit the real `personalFacts.json` directly; it's already filled in
+   with what you gave me.
+2. **`src/memory/userMemory.json`** — the flat key/value list from before
+   (timezone, etc.) for anything that doesn't fit the structured profile.
 
-To add or change something (like your timezone), just edit that file directly
-and save — every fact in there gets injected into her system prompt on every
-message, so she'll know it on the next thing you ask her. No restart needed
-for JSON edits, since it's read fresh each time you send a message.
+Both get merged into her system prompt automatically — no restart needed,
+they're read fresh on every message.
 
-## File management & reminders (new)
+## Chat history (now persistent)
 
-You can just type these directly into the chat and she'll actually do them
-(not just talk about doing them):
+Conversation history now survives app restarts — it's saved to
+`src/memory/chatHistory.json` (gitignored, since it's your private
+conversations) after every exchange. It loads automatically when the app
+starts, so clicking her shows your full past conversation, not a blank
+slate. Hit **"New"** to permanently clear it and start fresh.
 
-- **"remind me to drink water in 10 minutes"** → sets a one-off timer, shows
-  a native macOS notification when it fires
-- **"remind me to stretch every 30 minutes"** → repeating reminder, fires
-  forever until you restart the app
-- **"move screenshot.png to Desktop"** → moves a file (paths are relative to
-  your home folder unless you give a full path)
-- **"organize Downloads"** / **"clean up Downloads"** → sorts files in that
-  folder into subfolders (Images, Documents, Archives, Audio, Video) by
-  file extension
+## File management & reminders
 
-This works via simple pattern-matching in `src/main/commandParser.js` —
-it checks your message against a few regexes BEFORE sending anything to
-the LLM. If nothing matches, your message goes to Vivian normally. This is
-intentionally simple (not full NLU) — if a phrasing doesn't match, rephrase
-it closer to the examples above, or ask me to expand the patterns.
+You can type these directly into the chat with fairly natural phrasing —
+several variations are recognized, not just one exact wording:
+
+- **Reminders:** "remind me to drink water in 10 minutes", "remind me to
+  stretch every 30 minutes"
+- **Moving files** — any of these work: "move X to Y", "move X from
+  Downloads to Desktop", "put X on my Desktop", "send X to Y", "grab X
+  from Downloads and put it on my Desktop"
+- **Organizing a folder:** "organize Downloads", "clean up Downloads",
+  "sort Downloads" — sorts files into Images/Documents/Archives/Audio/Video
+  subfolders by extension
+
+This works via pattern-matching in `src/main/commandParser.js` — broader
+than a single regex now, but still not full language understanding. If a
+phrasing doesn't match, try rephrasing closer to the examples, or ask me
+to add more patterns.
 
 ## Requirements
 

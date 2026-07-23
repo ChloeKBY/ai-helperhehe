@@ -23,6 +23,11 @@ const newChatBtn = document.getElementById("newChatBtn");
 let conversation = []; // { role: "user" | "vivian", text: string }[]
 let streamingIndex = -1; // index in `conversation` currently being streamed into
 
+// Load whatever was saved from before (persists across app restarts now)
+window.vivian.getHistory().then((history) => {
+  conversation = history.messages.map((m) => ({ role: m.role, text: m.text }));
+});
+
 /**
  * Distinguishes a click (open the input box) from a drag (move the
  * window) on the same sprite element, since Electron's CSS drag-region
@@ -95,9 +100,10 @@ function closeInput() {
   inputBox.classList.remove("visible");
 }
 
-newChatBtn.addEventListener("click", (e) => {
+newChatBtn.addEventListener("click", async (e) => {
   e.stopPropagation();
   conversation = [];
+  await window.vivian.clearHistory();
   renderConversation();
 });
 
