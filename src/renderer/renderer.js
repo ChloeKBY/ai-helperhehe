@@ -20,6 +20,67 @@ const inputBox = document.getElementById("inputBox");
 const chatInput = document.getElementById("chatInput");
 const newChatBtn = document.getElementById("newChatBtn");
 
+/**
+ * The sprite PNGs have a solid flat background color baked in (not real
+ * alpha transparency), so the window shows a colored box around her
+ * instead of a transparent cutout. This strips that background at
+ * runtime: samples the color from the image's corner pixel, then makes
+ * every closely-matching pixel transparent. Results are cached per
+ * source path so this only runs once per sprite, not on every swap.
+ */
+const transparentSpriteCache = new Map(); // original src -> processed data URL
+
+function stripBackgroundColor(src) {
+  if (transparentSpriteCache.has(src)) {
+    return Promise.resolve(transparentSpriteCache.get(src));
+  }
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const { data } = imageData;
+
+      // Sample the background color from the top-left corner pixel
+      const bgR = data[0];
+      const bgG = data[1];
+      const bgB = data[2];
+      const TOLERANCE = 30; // allows for slight anti-aliasing/JPEG-like variance near edges
+
+      for (let i = 0; i < data.length; i += 4) {
+        const diff =
+          Math.abs(data[i] - bgR) + Math.abs(data[i + 1] - bgG) + Math.abs(data[i + 2] - bgB);
+        if (diff < TOLERANCE) {
+          data[i + 3] = 0; // make this pixel fully transparent
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      const dataUrl = canvas.toDataURL("image/png");
+      transparentSpriteCache.set(src, dataUrl);
+      resolve(dataUrl);
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+/** Sets the sprite's actual displayed image, with the background stripped. */
+async function setSpriteSrc(rawSrc) {
+  try {
+    const transparentSrc = await stripBackgroundColor(rawSrc);
+    sprite.src = transparentSrc;
+  } catch {
+    sprite.src = rawSrc; // fall back to the original if processing fails for any reason
+  }
+}
+
 let conversation = []; // { role: "user" | "vivian", text: string }[]
 let streamingIndex = -1; // index in `conversation` currently being streamed into
 
@@ -27,6 +88,17 @@ let streamingIndex = -1; // index in `conversation` currently being streamed int
 window.vivian.getHistory().then((history) => {
   conversation = history.messages.map((m) => ({ role: m.role, text: m.text }));
 });
+
+// Show the idle sprite (background stripped) as the very first thing,
+// and only THEN tell main to reveal the window — otherwise the window
+// could show before the transparent version is ready, flashing the raw
+// opaque-background image for a moment first.
+(async () => {
+  const transparentSrc = await stripBackgroundColor("../../assets/pngtuber/idle.png");
+  sprite.src = transparentSrc;
+  currentSpriteState = "idle";
+  window.vivian.notifyRendererReady();
+})();
 
 /**
  * Distinguishes a click (open the input box) from a drag (move the
@@ -50,6 +122,24 @@ sprite.addEventListener("pointerdown", (e) => {
   lastX = e.screenX;
   lastY = e.screenY;
 
+  // Batch rapid pointermove events into at most one window move per
+  // animation frame — without this, aggressive/fast dragging can queue up
+  // far more IPC calls than the window can actually process in time,
+  // causing it to keep visibly "catching up" (janky movement) even after
+  // you've already released the mouse.
+  let pendingDx = 0;
+  let pendingDy = 0;
+  let rafHandle = null;
+
+  const flushPendingMove = () => {
+    rafHandle = null;
+    if (pendingDx !== 0 || pendingDy !== 0) {
+      window.vivian.moveWindowBy(pendingDx, pendingDy);
+      pendingDx = 0;
+      pendingDy = 0;
+    }
+  };
+
   const onPointerMove = (moveEvent) => {
     const totalDx = moveEvent.screenX - dragStartX;
     const totalDy = moveEvent.screenY - dragStartY;
@@ -58,11 +148,14 @@ sprite.addEventListener("pointerdown", (e) => {
     }
 
     if (isDragging) {
-      const dx = moveEvent.screenX - lastX;
-      const dy = moveEvent.screenY - lastY;
-      window.vivian.moveWindowBy(dx, dy);
+      pendingDx += moveEvent.screenX - lastX;
+      pendingDy += moveEvent.screenY - lastY;
       lastX = moveEvent.screenX;
       lastY = moveEvent.screenY;
+
+      if (rafHandle === null) {
+        rafHandle = requestAnimationFrame(flushPendingMove);
+      }
     }
   };
 
@@ -71,6 +164,13 @@ sprite.addEventListener("pointerdown", (e) => {
     sprite.removeEventListener("pointermove", onPointerMove);
     sprite.removeEventListener("pointerup", onPointerUp);
     sprite.removeEventListener("pointercancel", onPointerUp);
+
+    // Cancel any move still queued for the next frame — this is the part
+    // that was missing before, letting a stray final move fire after release.
+    if (rafHandle !== null) {
+      cancelAnimationFrame(rafHandle);
+      rafHandle = null;
+    }
 
     if (!isDragging) {
       // It was a click, not a drag — open the input box
@@ -186,5 +286,24 @@ function setSprite(state) {
     "mlem"
   ];
   if (!validStates.includes(state)) state = "idle";
-  sprite.src = `../../assets/pngtuber/${state}.png`;
+  currentSpriteState = state;
+  setSpriteSrc(`../../assets/pngtuber/${state}.png`);
 }
+
+/**
+ * While she's just sitting idle (not mid-conversation), occasionally
+ * swap between the two idle variants for a little life/variety, instead
+ * of always showing the exact same still frame.
+ */
+let currentSpriteState = "idle";
+let idleAlternationTimer = null;
+function startIdleAlternation() {
+  clearInterval(idleAlternationTimer);
+  idleAlternationTimer = setInterval(() => {
+    // Only swap if she's actually idle right now — don't interrupt mid-chat
+    if (currentSpriteState === "idle" || currentSpriteState === "idle_2") {
+      setSprite(Math.random() < 0.5 ? "idle" : "idle_2");
+    }
+  }, 6000 + Math.random() * 6000); // every 6-12s, a little randomized so it doesn't feel mechanical
+}
+startIdleAlternation();

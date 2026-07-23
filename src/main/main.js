@@ -11,7 +11,7 @@
  * - No secrets live in the renderer at any point.
  */
 
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, screen } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -41,6 +41,7 @@ function createWindow() {
     alwaysOnTop: true,
     resizable: false,
     hasShadow: false,
+    show: false, // don't show until fully ready — avoids a visible flash of cut-off/unstyled content while the page loads
     webPreferences: {
       preload: path.join(__dirname, "../preload/preload.js"),
       contextIsolation: true,
@@ -52,6 +53,13 @@ function createWindow() {
   mainWindow.setAlwaysOnTop(true, "screen-saver");
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
 }
+
+// The renderer tells us once its first sprite frame (background stripped)
+// is actually ready — showing on THIS instead of just "ready-to-show"
+// avoids a flash of the raw opaque-background image before JS processes it.
+ipcMain.on("renderer:ready", () => {
+  if (mainWindow) mainWindow.show();
+});
 
 
 app.on("window-all-closed", () => {
@@ -132,7 +140,22 @@ ipcMain.on("window:moveBy", (event, dx, dy) => {
   }
 
   const [x, y] = mainWindow.getPosition();
-  mainWindow.setPosition(Math.round(x + numericDx), Math.round(y + numericDy));
+  const [winWidth, winHeight] = mainWindow.getSize();
+
+  // Clamp to the screen's visible bounds — without this, a fast/aggressive
+  // drag can throw the window fully off-screen (huge single-event deltas
+  // during quick mouse motion), where it becomes unreachable to click back.
+  // Keep at least a sliver of the window on-screen at all times.
+  const display = screen.getDisplayNearestPoint({ x, y });
+  const { x: areaX, y: areaY, width: areaWidth, height: areaHeight } = display.workArea;
+  const minVisible = 40; // pixels of the window that must stay on-screen
+
+  let newX = x + numericDx;
+  let newY = y + numericDy;
+  newX = Math.max(areaX - winWidth + minVisible, Math.min(newX, areaX + areaWidth - minVisible));
+  newY = Math.max(areaY - winHeight + minVisible, Math.min(newY, areaY + areaHeight - minVisible));
+
+  mainWindow.setPosition(Math.round(newX), Math.round(newY));
 });
 
 module.exports = { mainWindow };

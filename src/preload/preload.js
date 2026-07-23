@@ -30,6 +30,11 @@ contextBridge.exposeInMainWorld("vivian", {
   // which -webkit-app-region: drag blocks)
   moveWindowBy: (dx, dy) => ipcRenderer.send("window:moveBy", dx, dy),
 
+  // Tells main the renderer has finished its first real paint (sprite
+  // background stripped and ready) so the window can be shown without a
+  // flash of the raw/unprocessed image.
+  notifyRendererReady: () => ipcRenderer.send("renderer:ready"),
+
   // Persistent chat history — survives app restarts
   getHistory: () => ipcRenderer.invoke("history:get"),
   clearHistory: () => ipcRenderer.invoke("history:clear")
